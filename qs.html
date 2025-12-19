@@ -1,0 +1,1235 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Quantum Shadow</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Arial', sans-serif;
+    }
+
+    html, body, #game-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    #game-container {
+      position: relative;
+      background: linear-gradient(135deg, #0a0a0a 0%, #000000 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #game-canvas {
+      display: block;
+      cursor: crosshair;
+      border: 4px solid #8b0000;
+      box-shadow: 0 0 60px rgba(139, 0, 0, 0.9), 0 0 120px rgba(139, 0, 0, 0.5), inset 0 0 30px rgba(0, 0, 0, 0.5);
+      animation: eerieGlow 3s ease-in-out infinite;
+      border-radius: 8px;
+      transition: transform 0.05s ease-out;
+    }
+
+    @keyframes eerieGlow {
+      0%, 100% { 
+        box-shadow: 0 0 60px rgba(139, 0, 0, 0.9), 0 0 120px rgba(139, 0, 0, 0.5), inset 0 0 30px rgba(0, 0, 0, 0.5); 
+        border-color: #8b0000;
+      }
+      50% { 
+        box-shadow: 0 0 100px rgba(255, 0, 0, 1), 0 0 180px rgba(139, 0, 0, 0.7), inset 0 0 30px rgba(0, 0, 0, 0.5); 
+        border-color: #ff0000;
+      }
+    }
+
+    @keyframes heartbeat {
+      0%, 100% { transform: scale(1); }
+      25% { transform: scale(1.02); }
+      50% { transform: scale(1); }
+      75% { transform: scale(1.02); }
+    }
+
+    #ui-overlay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: #ffffff;
+      font-size: 18px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+      z-index: 10;
+      background: linear-gradient(135deg, rgba(20, 20, 30, 0.9), rgba(10, 10, 20, 0.95));
+      padding: 20px 25px;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(139, 0, 0, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    #title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #ff4444;
+      text-shadow: 0 0 20px rgba(255, 68, 68, 0.8), 0 0 40px rgba(139, 0, 0, 0.6);
+      letter-spacing: 2px;
+      font-family: 'Arial Black', 'Arial', sans-serif;
+    }
+
+    #instructions {
+      font-size: 14px;
+      margin-top: 10px;
+      line-height: 1.8;
+      color: #e0e0e0;
+    }
+
+    #victory-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    #victory-text {
+      font-size: 72px;
+      color: #ffd700;
+      font-weight: bold;
+      margin-bottom: 20px;
+      text-shadow: 0 0 30px #ffd700, 0 0 60px #ffa500;
+      animation: victoryPulse 1.5s ease-in-out infinite;
+    }
+
+    #victory-subtitle {
+      font-size: 28px;
+      color: #ffffff;
+      margin-bottom: 50px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    }
+
+    #victory-restart-button {
+      padding: 20px 50px;
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+      background: linear-gradient(135deg, #ffd700, #ff8c00);
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 15px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(255, 215, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      transition: all 0.3s ease;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      letter-spacing: 1px;
+    }
+
+    #victory-restart-button:hover {
+      background: linear-gradient(135deg, #ffed4e, #ffaa00);
+      transform: translateY(-3px);
+      box-shadow: 0 15px 40px rgba(255, 215, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    @keyframes victoryPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    #game-over-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(139, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.98) 60%, #000000 100%);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    #jumpscare-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+    }
+
+    #jumpscare-monster {
+      font-size: 300px;
+      animation: jumpscareShake 0.1s infinite, jumpscareGrow 0.6s ease-out;
+      filter: drop-shadow(0 0 50px red) drop-shadow(0 0 100px darkred);
+    }
+
+    @keyframes jumpscareShake {
+      0%, 100% { transform: translate(0, 0) rotate(-2deg); }
+      25% { transform: translate(-10px, 5px) rotate(2deg); }
+      50% { transform: translate(10px, -5px) rotate(-1deg); }
+      75% { transform: translate(-5px, -10px) rotate(1deg); }
+    }
+
+    @keyframes jumpscareGrow {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    #game-over-text {
+      font-size: 96px;
+      color: #ff0000;
+      font-weight: bold;
+      margin-bottom: 30px;
+      text-shadow: 0 0 40px #ff0000, 0 0 80px #8b0000, 0 10px 30px rgba(0, 0, 0, 0.8);
+      animation: pulse 1s infinite, glitchText 0.3s infinite;
+      letter-spacing: 8px;
+      font-family: 'Arial Black', 'Arial', sans-serif;
+    }
+
+    #game-over-subtitle {
+      font-size: 32px;
+      color: #ffcccc;
+      margin-bottom: 50px;
+      text-shadow: 0 0 20px rgba(255, 0, 0, 0.5), 2px 2px 4px rgba(0, 0, 0, 0.8);
+      animation: subtitlePulse 2s ease-in-out infinite;
+    }
+
+    #restart-button {
+      padding: 25px 60px;
+      font-size: 28px;
+      font-weight: bold;
+      color: white;
+      background: linear-gradient(135deg, #8b0000, #ff0000, #8b0000);
+      background-size: 200% 200%;
+      border: 4px solid rgba(255, 0, 0, 0.5);
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 10px 40px rgba(255, 0, 0, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 0 30px rgba(255, 0, 0, 0.4);
+      transition: all 0.3s ease;
+      text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 0, 0, 0.5);
+      letter-spacing: 3px;
+      animation: buttonGlow 2s ease-in-out infinite;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #restart-button:hover {
+      background: linear-gradient(135deg, #ff0000, #ff4444, #ff0000);
+      transform: translateY(-5px) scale(1.05);
+      box-shadow: 0 15px 50px rgba(255, 0, 0, 0.8), inset 0 2px 0 rgba(255, 255, 255, 0.3), 0 0 40px rgba(255, 0, 0, 0.6);
+      border-color: rgba(255, 100, 100, 0.8);
+    }
+
+    #restart-button:active {
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    @keyframes buttonGlow {
+      0%, 100% { 
+        background-position: 0% 50%;
+        box-shadow: 0 10px 40px rgba(255, 0, 0, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 0 30px rgba(255, 0, 0, 0.4);
+      }
+      50% { 
+        background-position: 100% 50%;
+        box-shadow: 0 10px 40px rgba(255, 0, 0, 0.8), inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 0 40px rgba(255, 0, 0, 0.6);
+      }
+    }
+
+    @keyframes glitchText {
+      0%, 90%, 100% { transform: translate(0, 0); }
+      20% { transform: translate(-2px, 2px); }
+      40% { transform: translate(2px, -2px); }
+      60% { transform: translate(-2px, -2px); }
+      80% { transform: translate(2px, 2px); }
+    }
+
+    @keyframes subtitlePulse {
+      0%, 100% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+
+    .reveal-hint {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #ff6666;
+      font-size: 18px;
+      text-align: center;
+      animation: hintPulse 2s infinite;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 12px 30px;
+      border-radius: 20px;
+      border: 2px solid rgba(255, 102, 102, 0.3);
+      text-shadow: 0 0 10px rgba(255, 102, 102, 0.8);
+      font-weight: bold;
+    }
+
+    @keyframes hintPulse {
+      0%, 100% { 
+        opacity: 0.7; 
+        transform: translateX(-50%) translateY(0);
+      }
+      50% { 
+        opacity: 1; 
+        transform: translateX(-50%) translateY(-5px);
+      }
+    }
+
+    #cheat-indicator {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: #00ff00;
+      font-size: 16px;
+      font-weight: bold;
+      background: linear-gradient(135deg, rgba(0, 50, 0, 0.9), rgba(0, 30, 0, 0.95));
+      padding: 12px 25px;
+      border-radius: 15px;
+      display: none;
+      z-index: 10;
+      border: 2px solid rgba(0, 255, 0, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 255, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+    }
+
+    #mini-map {
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      background: linear-gradient(135deg, rgba(0, 30, 0, 0.95), rgba(0, 20, 0, 0.98));
+      border: 3px solid rgba(0, 255, 0, 0.5);
+      border-radius: 15px;
+      padding: 15px;
+      display: none;
+      z-index: 10;
+      box-shadow: 0 8px 32px rgba(0, 255, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    #mini-map canvas {
+      display: block;
+      border-radius: 8px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div id="game-container">
+   <div id="ui-overlay">
+    <div id="title">
+     Project Quantum Shadow
+    </div>
+    <div id="instructions">
+     🖱️ Hold mouse to reveal walls<br>
+     ⌨️ WASD to move | A/D to turn<br>
+     👻 Beware the invisible monster!<br>
+     🎯 Find the exit!<br>
+     🔓 Secret code unlocks the maze...
+    </div>
+   </div>
+   <div id="cheat-indicator">
+    🔓 MAZE REVEALED
+   </div>
+   <div id="mini-map">
+    <canvas id="map-canvas" width="400" height="400"></canvas>
+   </div>
+   <canvas id="game-canvas"></canvas>
+   <div class="reveal-hint">
+    Hold down mouse button to see the maze
+   </div>
+   <div id="victory-screen">
+    <div id="victory-text">
+     🎉 VICTORY! 🎉
+    </div>
+    <div id="victory-subtitle">
+     You Found The Exit!
+    </div><button id="victory-restart-button">PLAY AGAIN</button>
+   </div>
+   <div id="jumpscare-screen">
+    <div id="jumpscare-monster">
+     👹
+    </div>
+   </div>
+   <div id="game-over-screen">
+    <div id="game-over-text">
+     GAME OVER
+    </div>
+    <div id="game-over-subtitle">
+     👻 The Monster Got You! 👻
+    </div><button id="restart-button">RESTART GAME</button>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      game_title: "Project Quantum Shadow",
+      instructions_text: "🖱️ Hold mouse to reveal walls\n⌨️ WASD to move | A/D to turn",
+      background_color: "#0a0a0a",
+      wall_color: "#ffffff",
+      floor_color: "#000000",
+      text_color: "#ffffff",
+      accent_color: "#8b0000"
+    };
+
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas size
+    canvas.width = 800;
+    canvas.height = 600;
+
+    // Player state
+    let player = {
+      x: 1.5,
+      y: 1.5,
+      angle: 0,
+      fov: Math.PI / 3,
+      speed: 0.05
+    };
+
+    // Monster state
+    let monster = {
+      x: 10.5,
+      y: 10.5,
+      speed: 0.02,
+      chaseDistance: 12
+    };
+
+    // Heartbeat effect when monster is near
+    let lastHeartbeat = 0;
+    function playHeartbeatEffect() {
+      const dx = player.x - monster.x;
+      const dy = player.y - monster.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance < 3 && Date.now() - lastHeartbeat > 800) {
+        // Visual heartbeat pulse
+        canvas.style.animation = 'none';
+        setTimeout(() => {
+          canvas.style.animation = 'eerieGlow 3s ease-in-out infinite, heartbeat 0.3s ease-in-out';
+        }, 10);
+        lastHeartbeat = Date.now();
+      }
+    }
+
+    // Mouse reveal state
+    let isRevealing = false;
+    let mouseX = canvas.width / 2;
+    let mouseY = canvas.height / 2;
+    const flashlightRadius = 120;
+
+    // Keys pressed
+    const keys = {};
+
+    let gameOver = false;
+
+    // Cheat code state
+    const cheatCode = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', ' '];
+    let cheatInput = [];
+    let cheatActivated = false;
+
+    // Footstep tracking for screen shake
+    let footstepCounter = 0;
+    const footstepInterval = 5;
+
+    // Maze layout (1 = wall, 0 = path, 2 = exit)
+    const maze = [
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+      [1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1],
+      [1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1],
+      [1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+      [1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1],
+      [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1],
+      [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1],
+      [1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+      [1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    ];
+
+    // Event listeners
+    document.addEventListener('keydown', (e) => {
+      const key = e.key.toLowerCase();
+      keys[key] = true;
+
+      // Cheat code detection
+      if (!cheatActivated) {
+        cheatInput.push(key);
+        if (cheatInput.length > cheatCode.length) {
+          cheatInput.shift();
+        }
+        
+        // Check if cheat code matches
+        if (cheatInput.length === cheatCode.length) {
+          let matches = true;
+          for (let i = 0; i < cheatCode.length; i++) {
+            if (cheatInput[i] !== cheatCode[i]) {
+              matches = false;
+              break;
+            }
+          }
+          if (matches) {
+            cheatActivated = true;
+            document.getElementById('cheat-indicator').style.display = 'block';
+            document.getElementById('mini-map').style.display = 'block';
+          }
+        }
+      }
+
+      // Prevent arrow keys from scrolling
+      if (key.includes('arrow')) {
+        e.preventDefault();
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      keys[e.key.toLowerCase()] = false;
+    });
+
+    canvas.addEventListener('mousedown', () => {
+      isRevealing = true;
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isRevealing = false;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+    });
+
+    // Restart button
+    document.getElementById('restart-button').addEventListener('click', () => {
+      // Reset game state
+      player.x = 1.5;
+      player.y = 1.5;
+      player.angle = 0;
+      monster.x = 10.5;
+      monster.y = 10.5;
+      gameOver = false;
+      revealedWalls.clear();
+      document.getElementById('game-over-screen').style.display = 'none';
+      document.getElementById('victory-screen').style.display = 'none';
+    });
+
+    // Victory restart button
+    document.getElementById('victory-restart-button').addEventListener('click', () => {
+      // Reset game state
+      player.x = 1.5;
+      player.y = 1.5;
+      player.angle = 0;
+      monster.x = 10.5;
+      monster.y = 10.5;
+      gameOver = false;
+      revealedWalls.clear();
+      document.getElementById('victory-screen').style.display = 'none';
+      document.getElementById('game-over-screen').style.display = 'none';
+    });
+
+    // Ray casting function
+    function castRay(angle) {
+      const step = 0.01;
+      let distance = 0;
+      let hitWall = false;
+      let hitExit = false;
+      let hitMonster = false;
+      let monsterDistance = 20;
+
+      while (distance < 20 && !hitWall) {
+        distance += step;
+        const testX = player.x + Math.cos(angle) * distance;
+        const testY = player.y + Math.sin(angle) * distance;
+
+        // Check if ray hits monster
+        const distToMonster = Math.sqrt(
+          Math.pow(testX - monster.x, 2) + Math.pow(testY - monster.y, 2)
+        );
+        if (distToMonster < 0.3 && !hitMonster) {
+          hitMonster = true;
+          monsterDistance = distance;
+        }
+
+        const mapX = Math.floor(testX);
+        const mapY = Math.floor(testY);
+
+        if (mapX < 0 || mapX >= maze[0].length || mapY < 0 || mapY >= maze.length) {
+          hitWall = true;
+          distance = 20;
+        } else if (maze[mapY][mapX] === 1) {
+          hitWall = true;
+        } else if (maze[mapY][mapX] === 2) {
+          hitExit = true;
+          hitWall = true;
+        }
+      }
+
+      return { distance, hitExit, hitMonster, monsterDistance };
+    }
+
+    // Simple pathfinding for monster
+    function findPath(startX, startY, targetX, targetY) {
+      const directions = [
+        {dx: 0, dy: -1}, // up
+        {dx: 1, dy: 0},  // right
+        {dx: 0, dy: 1},  // down
+        {dx: -1, dy: 0}  // left
+      ];
+      
+      const queue = [{x: Math.floor(startX), y: Math.floor(startY), path: []}];
+      const visited = new Set();
+      visited.add(`${Math.floor(startX)},${Math.floor(startY)}`);
+      
+      const targetGridX = Math.floor(targetX);
+      const targetGridY = Math.floor(targetY);
+      
+      // Limit search depth to prevent lag
+      let iterations = 0;
+      const maxIterations = 200;
+      
+      while (queue.length > 0 && iterations < maxIterations) {
+        iterations++;
+        const current = queue.shift();
+        
+        // Found target
+        if (current.x === targetGridX && current.y === targetGridY) {
+          return current.path.length > 0 ? current.path[0] : null;
+        }
+        
+        // Try all directions
+        for (const dir of directions) {
+          const newX = current.x + dir.dx;
+          const newY = current.y + dir.dy;
+          const key = `${newX},${newY}`;
+          
+          if (!visited.has(key) && 
+              maze[newY] && 
+              maze[newY][newX] !== undefined && 
+              maze[newY][newX] !== 1) {
+            visited.add(key);
+            queue.push({
+              x: newX, 
+              y: newY, 
+              path: [...current.path, {x: newX + 0.5, y: newY + 0.5}]
+            });
+          }
+        }
+      }
+      
+      return null;
+    }
+
+    // Update monster AI with pathfinding
+    function updateMonster() {
+      if (gameOver) return;
+
+      const dx = player.x - monster.x;
+      const dy = player.y - monster.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Check if monster caught player
+      if (distance < 0.5) {
+        gameOver = true;
+        cheatActivated = false;
+        document.getElementById('cheat-indicator').style.display = 'none';
+        document.getElementById('mini-map').style.display = 'none';
+        
+        // Show jumpscare first
+        document.getElementById('jumpscare-screen').style.display = 'flex';
+        
+        // After 1.5 seconds, show game over screen
+        setTimeout(() => {
+          document.getElementById('jumpscare-screen').style.display = 'none';
+          document.getElementById('game-over-screen').style.display = 'flex';
+        }, 1500);
+        
+        return;
+      }
+
+      // Chase player if within range
+      if (distance < monster.chaseDistance) {
+        // Get next position from pathfinding
+        const nextPos = findPath(monster.x, monster.y, player.x, player.y);
+        
+        if (nextPos) {
+          // Move towards next pathfinding target
+          const targetDx = nextPos.x - monster.x;
+          const targetDy = nextPos.y - monster.y;
+          const targetDist = Math.sqrt(targetDx * targetDx + targetDy * targetDy);
+          
+          if (targetDist > 0.05) {
+            const moveX = (targetDx / targetDist) * monster.speed;
+            const moveY = (targetDy / targetDist) * monster.speed;
+            
+            const newX = monster.x + moveX;
+            const newY = monster.y + moveY;
+            
+            // Check if new position is valid (not in wall)
+            const checkX = Math.floor(newX);
+            const checkY = Math.floor(newY);
+            
+            if (maze[checkY] && maze[checkY][checkX] !== 1) {
+              monster.x = newX;
+              monster.y = newY;
+            }
+          }
+        }
+      }
+    }
+
+    // Update player position
+    function updatePlayer() {
+      if (gameOver) return;
+
+      const moveSpeed = player.speed;
+      const turnSpeed = 0.08;
+      let newX = player.x;
+      let newY = player.y;
+      let isMoving = false;
+
+      if (keys['w']) {
+        newX += Math.cos(player.angle) * moveSpeed;
+        newY += Math.sin(player.angle) * moveSpeed;
+        isMoving = true;
+      }
+      if (keys['s']) {
+        newX -= Math.cos(player.angle) * moveSpeed;
+        newY -= Math.sin(player.angle) * moveSpeed;
+        isMoving = true;
+      }
+      if (keys['a']) {
+        player.angle -= turnSpeed;
+      }
+      if (keys['d']) {
+        player.angle += turnSpeed;
+      }
+
+      const mapX = Math.floor(newX);
+      const mapY = Math.floor(newY);
+
+      if (maze[mapY] && maze[mapY][mapX] !== 1) {
+        const oldX = player.x;
+        const oldY = player.y;
+        player.x = newX;
+        player.y = newY;
+
+        // Track footsteps and create screen shake
+        if (isMoving && (oldX !== newX || oldY !== newY)) {
+          footstepCounter++;
+          if (footstepCounter >= footstepInterval) {
+            footstepCounter = 0;
+            
+            // Apply stronger screen shake
+            const shakeIntensity = 6;
+            const shakeX = (Math.random() - 0.5) * shakeIntensity;
+            const shakeY = (Math.random() - 0.5) * shakeIntensity;
+            canvas.style.transform = `translate(${shakeX}px, ${shakeY}px)`;
+            
+            // Reset shake after a short delay
+            setTimeout(() => {
+              canvas.style.transform = 'translate(0, 0)';
+            }, 80);
+          }
+        }
+
+        if (maze[mapY][mapX] === 2) {
+          gameOver = true;
+          document.getElementById('victory-screen').style.display = 'flex';
+        }
+      }
+    }
+
+    // Track revealed walls
+    let revealedWalls = new Set();
+
+    // Render 3D view
+    function render() {
+      const config = window.elementSdk ? window.elementSdk.config : defaultConfig;
+      
+      // Clear canvas with complete darkness
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Cast rays for 3D view
+      const numRays = canvas.width;
+      
+      for (let i = 0; i < numRays; i++) {
+        const rayAngle = player.angle - player.fov / 2 + (i / numRays) * player.fov;
+        const ray = castRay(rayAngle);
+        const distance = ray.distance * Math.cos(rayAngle - player.angle);
+        
+        const wallHeight = (canvas.height / distance) * 0.5;
+        const wallTop = (canvas.height / 2) - wallHeight;
+        const wallBottom = wallTop + (wallHeight * 2);
+
+        // Calculate circular distance from mouse position to wall center
+        const wallCenterY = wallTop + wallHeight;
+        const distanceToMouse = Math.sqrt(
+          Math.pow(i - mouseX, 2) + Math.pow(wallCenterY - mouseY, 2)
+        );
+        
+        // Create a key for this wall position
+        const testX = player.x + Math.cos(rayAngle) * ray.distance;
+        const testY = player.y + Math.sin(rayAngle) * ray.distance;
+        const wallKey = `${Math.floor(testX * 2)}_${Math.floor(testY * 2)}`;
+        
+        // If mouse flashlight is on and touches this wall, mark it as revealed
+        const isInFlashlight = cheatActivated || (isRevealing && distanceToMouse < flashlightRadius);
+        if (isInFlashlight) {
+          revealedWalls.add(wallKey);
+        }
+        
+        // Check if this wall was previously revealed
+        const wasPreviouslyRevealed = revealedWalls.has(wallKey);
+        
+        // Draw monster if hit and in flashlight (or cheat is active)
+        if (ray.hitMonster && (isRevealing || cheatActivated)) {
+          const monsterDist = ray.monsterDistance * Math.cos(rayAngle - player.angle);
+          const monsterHeight = (canvas.height / monsterDist) * 0.5;
+          const monsterTop = (canvas.height / 2) - monsterHeight;
+          
+          const monsterCenterY = monsterTop + monsterHeight;
+          const monsterDistanceToMouse = Math.sqrt(
+            Math.pow(i - mouseX, 2) + Math.pow(monsterCenterY - mouseY, 2)
+          );
+          
+          const monsterRevealRadius = cheatActivated ? 99999 : flashlightRadius + 50;
+          if (monsterDistanceToMouse < monsterRevealRadius) {
+            const monsterFade = cheatActivated ? 1 : Math.max(0.6, (1 - (monsterDistanceToMouse / monsterRevealRadius)));
+            
+            // Calculate angle between monster and player for facing direction
+            const angleToPlayer = Math.atan2(player.y - monster.y, player.x - monster.x);
+            const monsterViewAngle = rayAngle - angleToPlayer;
+            
+            // Normalize angle to determine if we're seeing the front of the monster
+            let normalizedAngle = ((monsterViewAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+            if (normalizedAngle > Math.PI) normalizedAngle = Math.PI * 2 - normalizedAngle;
+            
+            // Eyes are only visible when looking at the front (within ~90 degrees)
+            const isFrontFacing = normalizedAngle < Math.PI / 2;
+            
+            // Pulsing effect
+            const pulseIntensity = 0.6 + Math.sin(Date.now() / 150) * 0.4;
+            const breathe = Math.sin(Date.now() / 300) * 3;
+            
+            // Massive outer aura
+            ctx.fillStyle = `rgba(255, 0, 0, ${monsterFade * pulseIntensity * 0.15})`;
+            ctx.fillRect(i - 12, monsterTop - 20, 25, monsterHeight * 2 + 40);
+            
+            // Large red glow
+            ctx.fillStyle = `rgba(200, 0, 0, ${monsterFade * pulseIntensity * 0.4})`;
+            ctx.fillRect(i - 8, monsterTop - 12, 17, monsterHeight * 2 + 24);
+            
+            // Medium dark shadow
+            ctx.fillStyle = `rgba(80, 0, 0, ${monsterFade * 0.7})`;
+            ctx.fillRect(i - 5, monsterTop - 6, 11, monsterHeight * 2 + 12);
+            
+            // Core body - darker, more solid
+            ctx.fillStyle = `rgba(40, 0, 0, ${monsterFade * 0.9})`;
+            ctx.fillRect(i - 2, monsterTop, 5, monsterHeight * 2);
+            
+            // Inner dark core
+            ctx.fillStyle = `rgba(20, 0, 0, ${monsterFade})`;
+            ctx.fillRect(i, monsterTop, 2, monsterHeight * 2);
+            
+            // Only draw eyes when facing the player
+            if (isFrontFacing) {
+              // Creepy eyes with pulsing
+              const eyeSize = Math.max(5, monsterHeight * 0.25);
+              const eyeGlow = pulseIntensity;
+              const eyeWidth = Math.max(6, monsterHeight * 0.15);
+              
+              // Calculate eye offset based on viewing angle for "always watching" effect
+              const eyeOffset = Math.sin(normalizedAngle * 2) * 3;
+              
+              // Eye 1 - left eye (appears higher)
+              const eye1Y = monsterTop + monsterHeight * 0.35;
+              const eye1X = i - 3 + eyeOffset;
+              
+              // Outer dark aura
+              ctx.fillStyle = `rgba(0, 0, 0, ${monsterFade * 0.8})`;
+              ctx.fillRect(eye1X - 2, eye1Y - 3 + breathe, eyeWidth + 4, eyeSize + 6);
+              
+              // Red bloodshot outer glow
+              ctx.fillStyle = `rgba(150, 0, 0, ${monsterFade * eyeGlow * 0.6})`;
+              ctx.fillRect(eye1X - 1, eye1Y - 1 + breathe, eyeWidth + 2, eyeSize + 2);
+              
+              // Yellow sickly base
+              ctx.fillStyle = `rgba(180, 180, 0, ${monsterFade * eyeGlow})`;
+              ctx.fillRect(eye1X, eye1Y + breathe, eyeWidth, eyeSize);
+              
+              // Dark pupil - narrow vertical slit
+              const pupilWidth = 2;
+              ctx.fillStyle = `rgba(0, 0, 0, ${monsterFade})`;
+              ctx.fillRect(eye1X + eyeWidth/2 - 1, eye1Y + breathe, pupilWidth, eyeSize);
+              
+              // Tiny red glint in pupil
+              ctx.fillStyle = `rgba(255, 0, 0, ${monsterFade})`;
+              ctx.fillRect(eye1X + eyeWidth/2, eye1Y + 1 + breathe, 1, 2);
+              
+              // Eye 2 - right eye (appears lower)
+              const eye2Y = monsterTop + monsterHeight * 0.58;
+              const eye2X = i + 0 + eyeOffset;
+              
+              // Outer dark aura
+              ctx.fillStyle = `rgba(0, 0, 0, ${monsterFade * 0.8})`;
+              ctx.fillRect(eye2X - 2, eye2Y - 3 - breathe, eyeWidth + 4, eyeSize + 6);
+              
+              // Red bloodshot outer glow
+              ctx.fillStyle = `rgba(150, 0, 0, ${monsterFade * eyeGlow * 0.6})`;
+              ctx.fillRect(eye2X - 1, eye2Y - 1 - breathe, eyeWidth + 2, eyeSize + 2);
+              
+              // Yellow sickly base
+              ctx.fillStyle = `rgba(180, 180, 0, ${monsterFade * eyeGlow})`;
+              ctx.fillRect(eye2X, eye2Y - breathe, eyeWidth, eyeSize);
+              
+              // Dark pupil - narrow vertical slit
+              ctx.fillStyle = `rgba(0, 0, 0, ${monsterFade})`;
+              ctx.fillRect(eye2X + eyeWidth/2 - 1, eye2Y - breathe, pupilWidth, eyeSize);
+              
+              // Tiny red glint in pupil
+              ctx.fillStyle = `rgba(255, 0, 0, ${monsterFade})`;
+              ctx.fillRect(eye2X + eyeWidth/2, eye2Y + 1 - breathe, 1, 2);
+            }
+            
+            // Add jagged edges to simulate claws/appendages
+            if (i % 3 === 0) {
+              const spikeHeight = monsterHeight * 0.3;
+              ctx.fillStyle = `rgba(60, 0, 0, ${monsterFade * 0.6})`;
+              ctx.fillRect(i - 1, monsterTop - spikeHeight, 3, spikeHeight);
+              ctx.fillRect(i - 1, monsterTop + monsterHeight * 2, 3, spikeHeight);
+            }
+          }
+        }
+        
+        // Show walls if they're currently in flashlight OR if they've been revealed before
+        if (cheatActivated) {
+          // Cheat mode: show full solid walls
+          if (ray.hitExit) {
+            // Draw exit as solid golden wall
+            ctx.fillStyle = `rgba(255, 215, 0, 1)`;
+            ctx.fillRect(i, wallTop, 0.5, wallBottom - wallTop);
+          } else {
+            const wallColor = config.wall_color || defaultConfig.wall_color;
+            const rgb = hexToRgb(wallColor);
+            // Draw wall as solid thin wall
+            ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`;
+            ctx.fillRect(i, wallTop, 0.5, wallBottom - wallTop);
+          }
+        } else if (isInFlashlight || wasPreviouslyRevealed) {
+          // Calculate smooth fade based on circular distance from mouse
+          let fadeEffect;
+          if (isInFlashlight) {
+            // Smooth circular falloff
+            fadeEffect = Math.max(0.3, 1 - (distanceToMouse / flashlightRadius));
+          } else {
+            // Previously revealed walls are dimmer
+            fadeEffect = 0.4;
+          }
+          
+          if (ray.hitExit) {
+            // Draw exit as solid golden wall with fade
+            const exitRgb = { r: 255, g: 215, b: 0 };
+            ctx.fillStyle = `rgba(${exitRgb.r}, ${exitRgb.g}, ${exitRgb.b}, ${fadeEffect})`;
+            ctx.fillRect(i, wallTop, 0.5, wallBottom - wallTop);
+            
+            // Add extra glow when in flashlight
+            if (isInFlashlight && distanceToMouse < 50) {
+              ctx.fillStyle = `rgba(255, 255, 200, ${fadeEffect * 0.3})`;
+              ctx.fillRect(i - 1, wallTop, 2.5, wallBottom - wallTop);
+            }
+          } else {
+            const wallColor = config.wall_color || defaultConfig.wall_color;
+            const rgb = hexToRgb(wallColor);
+            
+            // Draw wall as solid thin wall with smooth fade
+            ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${fadeEffect})`;
+            ctx.fillRect(i, wallTop, 0.5, wallBottom - wallTop);
+            
+            // Add highlight effect when in flashlight center
+            if (isInFlashlight && distanceToMouse < 40) {
+              const highlightIntensity = (1 - distanceToMouse / 40) * 0.3;
+              ctx.fillStyle = `rgba(255, 255, 255, ${highlightIntensity})`;
+              ctx.fillRect(i, wallTop, 0.5, wallBottom - wallTop);
+            }
+          }
+        }
+      }
+
+      // Draw multi-layered circular flashlight effect
+      if (isRevealing && !cheatActivated) {
+        // Outer wide glow layer
+        const gradient1 = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, flashlightRadius * 1.3);
+        gradient1.addColorStop(0, 'rgba(255, 250, 220, 0.35)');
+        gradient1.addColorStop(0.2, 'rgba(255, 245, 200, 0.25)');
+        gradient1.addColorStop(0.5, 'rgba(255, 240, 180, 0.15)');
+        gradient1.addColorStop(0.8, 'rgba(255, 235, 150, 0.08)');
+        gradient1.addColorStop(1, 'rgba(255, 230, 120, 0)');
+        
+        ctx.fillStyle = gradient1;
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, flashlightRadius * 1.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Mid glow layer
+        const gradient2 = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, flashlightRadius * 0.8);
+        gradient2.addColorStop(0, 'rgba(255, 255, 240, 0.4)');
+        gradient2.addColorStop(0.4, 'rgba(255, 250, 220, 0.25)');
+        gradient2.addColorStop(0.7, 'rgba(255, 245, 200, 0.15)');
+        gradient2.addColorStop(1, 'rgba(255, 240, 180, 0)');
+        
+        ctx.fillStyle = gradient2;
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, flashlightRadius * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Bright center hotspot
+        const gradient3 = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, flashlightRadius * 0.3);
+        gradient3.addColorStop(0, 'rgba(255, 255, 245, 0.5)');
+        gradient3.addColorStop(0.5, 'rgba(255, 255, 230, 0.3)');
+        gradient3.addColorStop(1, 'rgba(255, 250, 220, 0)');
+        
+        ctx.fillStyle = gradient3;
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, flashlightRadius * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add subtle edge rings
+        ctx.strokeStyle = 'rgba(255, 255, 220, 0.12)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, flashlightRadius * 0.85, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.strokeStyle = 'rgba(255, 255, 200, 0.08)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, flashlightRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Outer edge definition
+        ctx.strokeStyle = 'rgba(255, 250, 180, 0.06)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, flashlightRadius * 1.15, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Show hint message only if no walls have been revealed yet
+      if (!isRevealing && !cheatActivated && revealedWalls.size === 0) {
+        ctx.fillStyle = config.text_color || defaultConfig.text_color;
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('The maze is invisible...', canvas.width / 2, canvas.height / 2 - 20);
+        ctx.font = '18px Arial';
+        ctx.fillText('Hold mouse button to reveal', canvas.width / 2, canvas.height / 2 + 20);
+      }
+    }
+
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 74, g: 144, b: 226 };
+    }
+
+    // Game loop
+    function gameLoop() {
+      updatePlayer();
+      updateMonster();
+      playHeartbeatEffect();
+      render();
+      renderMiniMap();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Render mini-map
+    function renderMiniMap() {
+      if (!cheatActivated) return;
+
+      const mapCanvas = document.getElementById('map-canvas');
+      const mapCtx = mapCanvas.getContext('2d');
+      const cellSize = 20;
+
+      // Clear mini-map
+      mapCtx.fillStyle = '#000000';
+      mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+
+      // Draw maze
+      for (let y = 0; y < maze.length; y++) {
+        for (let x = 0; x < maze[y].length; x++) {
+          if (maze[y][x] === 1) {
+            // Wall
+            mapCtx.fillStyle = '#ffffff';
+            mapCtx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          } else if (maze[y][x] === 2) {
+            // Exit
+            mapCtx.fillStyle = '#ffd700';
+            mapCtx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          } else {
+            // Path
+            mapCtx.fillStyle = '#333333';
+            mapCtx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+          
+          // Draw grid lines
+          mapCtx.strokeStyle = '#555555';
+          mapCtx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        }
+      }
+
+      // Draw player
+      mapCtx.fillStyle = '#00ff00';
+      mapCtx.beginPath();
+      mapCtx.arc(player.x * cellSize, player.y * cellSize, 6, 0, Math.PI * 2);
+      mapCtx.fill();
+
+      // Draw player direction
+      mapCtx.strokeStyle = '#00ff00';
+      mapCtx.lineWidth = 2;
+      mapCtx.beginPath();
+      mapCtx.moveTo(player.x * cellSize, player.y * cellSize);
+      mapCtx.lineTo(
+        player.x * cellSize + Math.cos(player.angle) * 12,
+        player.y * cellSize + Math.sin(player.angle) * 12
+      );
+      mapCtx.stroke();
+
+      // Draw monster
+      mapCtx.fillStyle = '#ff0000';
+      mapCtx.beginPath();
+      mapCtx.arc(monster.x * cellSize, monster.y * cellSize, 6, 0, Math.PI * 2);
+      mapCtx.fill();
+
+      // Add pulsing effect to monster
+      mapCtx.strokeStyle = '#ff0000';
+      mapCtx.lineWidth = 2;
+      mapCtx.beginPath();
+      const pulseSize = 8 + Math.sin(Date.now() / 200) * 2;
+      mapCtx.arc(monster.x * cellSize, monster.y * cellSize, pulseSize, 0, Math.PI * 2);
+      mapCtx.stroke();
+    }
+
+    // Element SDK implementation
+    async function onConfigChange(config) {
+      const titleElement = document.getElementById('title');
+      const instructionsElement = document.getElementById('instructions');
+      const gameContainer = document.getElementById('game-container');
+
+      titleElement.textContent = config.game_title || defaultConfig.game_title;
+      instructionsElement.innerHTML = (config.instructions_text || defaultConfig.instructions_text).replace(/\n/g, '<br>');
+      
+      gameContainer.style.background = `linear-gradient(135deg, ${config.background_color || defaultConfig.background_color} 0%, ${config.floor_color || defaultConfig.floor_color} 100%)`;
+      
+      canvas.style.borderColor = config.accent_color || defaultConfig.accent_color;
+      titleElement.style.color = config.accent_color || defaultConfig.accent_color;
+    }
+
+    function mapToCapabilities(config) {
+      return {
+        recolorables: [
+          {
+            get: () => config.background_color || defaultConfig.background_color,
+            set: (value) => {
+              config.background_color = value;
+              window.elementSdk.setConfig({ background_color: value });
+            }
+          },
+          {
+            get: () => config.wall_color || defaultConfig.wall_color,
+            set: (value) => {
+              config.wall_color = value;
+              window.elementSdk.setConfig({ wall_color: value });
+            }
+          },
+          {
+            get: () => config.floor_color || defaultConfig.floor_color,
+            set: (value) => {
+              config.floor_color = value;
+              window.elementSdk.setConfig({ floor_color: value });
+            }
+          },
+          {
+            get: () => config.text_color || defaultConfig.text_color,
+            set: (value) => {
+              config.text_color = value;
+              window.elementSdk.setConfig({ text_color: value });
+            }
+          },
+          {
+            get: () => config.accent_color || defaultConfig.accent_color,
+            set: (value) => {
+              config.accent_color = value;
+              window.elementSdk.setConfig({ accent_color: value });
+            }
+          }
+        ],
+        borderables: [],
+        fontEditable: undefined,
+        fontSizeable: undefined
+      };
+    }
+
+    function mapToEditPanelValues(config) {
+      return new Map([
+        ["game_title", config.game_title || defaultConfig.game_title],
+        ["instructions_text", config.instructions_text || defaultConfig.instructions_text]
+      ]);
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities,
+        mapToEditPanelValues
+      });
+    }
+
+    // Start game
+    gameLoop();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b0915629736fa34',t:'MTc2NjE3MDIwNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
+

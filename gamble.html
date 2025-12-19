@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lucky Dice Game</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100%;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    html {
+      height: 100%;
+      width: 100%;
+    }
+
+    .game-container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      max-width: 500px;
+      width: 90%;
+    }
+
+    h1 {
+      color: #333;
+      margin: 0 0 10px 0;
+      font-size: 42px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin: 0 0 30px 0;
+      font-size: 18px;
+    }
+
+    .coins-display {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 15px;
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 30px;
+    }
+
+    .dice-container {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 30px 0;
+      min-height: 100px;
+    }
+
+    .die {
+      width: 80px;
+      height: 80px;
+      background: white;
+      border: 3px solid #667eea;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 48px;
+      font-weight: bold;
+      color: #667eea;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease;
+    }
+
+    .die.rolling {
+      animation: roll 0.5s ease-in-out;
+    }
+
+    @keyframes roll {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(90deg); }
+      50% { transform: rotate(180deg); }
+      75% { transform: rotate(270deg); }
+    }
+
+    .bet-controls {
+      margin: 20px 0;
+    }
+
+    .bet-amount {
+      font-size: 20px;
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    .bet-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .bet-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    .bet-btn:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+
+    .bet-btn:active {
+      transform: translateY(0);
+    }
+
+    .roll-button {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border: none;
+      padding: 15px 50px;
+      border-radius: 50px;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+    }
+
+    .roll-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+    }
+
+    .roll-button:active {
+      transform: translateY(0);
+    }
+
+    .roll-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .message {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      min-height: 30px;
+      color: #333;
+    }
+
+    .message.win {
+      color: #4caf50;
+    }
+
+    .message.lose {
+      color: #f44336;
+    }
+
+    .rules {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f5f5f5;
+      border-radius: 10px;
+      text-align: left;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .rules h3 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    .rules ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="game-container">
+   <h1 id="game-title">🎲 Lucky Dice 🎲</h1>
+   <p class="subtitle" id="subtitle">Roll the dice and test your luck!</p>
+   <div class="coins-display">
+    💰 Coins: <span id="coins">100</span>
+   </div>
+   <div class="bet-controls">
+    <div class="bet-amount">
+     Current Bet: <strong><span id="current-bet">10</span> coins</strong>
+    </div>
+    <div class="bet-buttons"><button class="bet-btn" id="bet-btn-5">5 Coins</button> <button class="bet-btn" id="bet-btn-10">10 Coins</button> <button class="bet-btn" id="bet-btn-25">25 Coins</button> <button class="bet-btn" id="bet-btn-50">50 Coins</button>
+    </div>
+   </div>
+   <div class="dice-container">
+    <div class="die" id="die1">
+     ?
+    </div>
+    <div class="die" id="die2">
+     ?
+    </div>
+   </div><button class="roll-button" id="roll-btn">Roll Dice!</button>
+   <div class="message" id="message"></div>
+   <div class="rules">
+    <h3>📜 How to Play</h3>
+    <ul>
+     <li>Choose your bet amount (5, 10, 25, or 50 coins)</li>
+     <li>Click "Roll Dice!" to play</li>
+     <li>If the sum is 7 or 11: Win 2x your bet! 🎉</li>
+     <li>If the sum is 2, 3, or 12: Lose your bet 😢</li>
+     <li>Any other sum: Get your bet back (push)</li>
+     <li>Start with 100 coins - try to win more!</li>
+    </ul>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      game_title: "🎲 Lucky Dice 🎲",
+      subtitle: "Roll the dice and test your luck!",
+      roll_button_text: "Roll Dice!",
+      bet_button_text: "Coins",
+      background_color: "#667eea",
+      surface_color: "#ffffff",
+      text_color: "#333333",
+      primary_action_color: "#f5576c",
+      secondary_action_color: "#667eea",
+      font_family: "Arial",
+      font_size: 16
+    };
+
+    let coins = 100;
+    let currentBet = 10;
+    let isRolling = false;
+
+    const coinsDisplay = document.getElementById('coins');
+    const currentBetDisplay = document.getElementById('current-bet');
+    const die1 = document.getElementById('die1');
+    const die2 = document.getElementById('die2');
+    const rollBtn = document.getElementById('roll-btn');
+    const message = document.getElementById('message');
+    const betButtons = document.querySelectorAll('.bet-btn');
+
+    async function onConfigChange(config) {
+      const titleElement = document.getElementById('game-title');
+      const subtitleElement = document.getElementById('subtitle');
+      const rollButton = document.getElementById('roll-btn');
+      const betBtns = document.querySelectorAll('.bet-btn');
+      
+      titleElement.textContent = config.game_title || defaultConfig.game_title;
+      subtitleElement.textContent = config.subtitle || defaultConfig.subtitle;
+      rollButton.textContent = config.roll_button_text || defaultConfig.roll_button_text;
+      
+      const customFont = config.font_family || defaultConfig.font_family;
+      const baseFontStack = 'Arial, sans-serif';
+      const baseSize = config.font_size || defaultConfig.font_size;
+      
+      document.body.style.fontFamily = `${customFont}, ${baseFontStack}`;
+      titleElement.style.fontSize = `${baseSize * 2.625}px`;
+      subtitleElement.style.fontSize = `${baseSize * 1.125}px`;
+      rollButton.style.fontSize = `${baseSize * 1.5}px`;
+      
+      const backgroundColor = config.background_color || defaultConfig.background_color;
+      const surfaceColor = config.surface_color || defaultConfig.surface_color;
+      const textColor = config.text_color || defaultConfig.text_color;
+      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+      const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+      
+      document.body.style.background = `linear-gradient(135deg, ${backgroundColor} 0%, #764ba2 100%)`;
+      document.querySelector('.game-container').style.backgroundColor = surfaceColor;
+      titleElement.style.color = textColor;
+      subtitleElement.style.color = textColor;
+      
+      betBtns.forEach(btn => {
+        btn.style.backgroundColor = secondaryColor;
+      });
+      
+      rollButton.style.background = `linear-gradient(135deg, #f093fb 0%, ${primaryColor} 100%)`;
+      
+      document.querySelectorAll('.die').forEach(die => {
+        die.style.borderColor = secondaryColor;
+        die.style.color = secondaryColor;
+        die.style.backgroundColor = surfaceColor;
+      });
+    }
+
+    betButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const betValue = parseInt(btn.id.split('-')[2]);
+        if (betValue <= coins) {
+          currentBet = betValue;
+          currentBetDisplay.textContent = currentBet;
+          message.textContent = '';
+          message.className = 'message';
+        } else {
+          message.textContent = 'Not enough coins!';
+          message.className = 'message lose';
+        }
+      });
+    });
+
+    rollBtn.addEventListener('click', () => {
+      if (isRolling) return;
+      if (coins < currentBet) {
+        message.textContent = 'Not enough coins! Lower your bet.';
+        message.className = 'message lose';
+        return;
+      }
+
+      isRolling = true;
+      rollBtn.disabled = true;
+      message.textContent = '';
+      message.className = 'message';
+      
+      die1.classList.add('rolling');
+      die2.classList.add('rolling');
+
+      setTimeout(() => {
+        const roll1 = Math.floor(Math.random() * 6) + 1;
+        const roll2 = Math.floor(Math.random() * 6) + 1;
+        const sum = roll1 + roll2;
+
+        die1.textContent = roll1;
+        die2.textContent = roll2;
+        
+        die1.classList.remove('rolling');
+        die2.classList.remove('rolling');
+
+        if (sum === 7 || sum === 11) {
+          coins += currentBet;
+          message.textContent = `🎉 Winner! Sum: ${sum} - Won ${currentBet} coins!`;
+          message.className = 'message win';
+        } else if (sum === 2 || sum === 3 || sum === 12) {
+          coins -= currentBet;
+          message.textContent = `😢 Lost! Sum: ${sum} - Lost ${currentBet} coins.`;
+          message.className = 'message lose';
+        } else {
+          message.textContent = `Push! Sum: ${sum} - Bet returned.`;
+          message.className = 'message';
+        }
+
+        coinsDisplay.textContent = coins;
+
+        if (coins === 0) {
+          message.textContent += ' Game Over! Refresh to play again.';
+          rollBtn.disabled = true;
+        } else {
+          isRolling = false;
+          rollBtn.disabled = false;
+        }
+      }, 500);
+    });
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            {
+              get: () => config.background_color || defaultConfig.background_color,
+              set: (value) => {
+                config.background_color = value;
+                window.elementSdk.setConfig({ background_color: value });
+              }
+            },
+            {
+              get: () => config.surface_color || defaultConfig.surface_color,
+              set: (value) => {
+                config.surface_color = value;
+                window.elementSdk.setConfig({ surface_color: value });
+              }
+            },
+            {
+              get: () => config.text_color || defaultConfig.text_color,
+              set: (value) => {
+                config.text_color = value;
+                window.elementSdk.setConfig({ text_color: value });
+              }
+            },
+            {
+              get: () => config.primary_action_color || defaultConfig.primary_action_color,
+              set: (value) => {
+                config.primary_action_color = value;
+                window.elementSdk.setConfig({ primary_action_color: value });
+              }
+            },
+            {
+              get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+              set: (value) => {
+                config.secondary_action_color = value;
+                window.elementSdk.setConfig({ secondary_action_color: value });
+              }
+            }
+          ],
+          borderables: [],
+          fontEditable: {
+            get: () => config.font_family || defaultConfig.font_family,
+            set: (value) => {
+              config.font_family = value;
+              window.elementSdk.setConfig({ font_family: value });
+            }
+          },
+          fontSizeable: {
+            get: () => config.font_size || defaultConfig.font_size,
+            set: (value) => {
+              config.font_size = value;
+              window.elementSdk.setConfig({ font_size: value });
+            }
+          }
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ["game_title", config.game_title || defaultConfig.game_title],
+          ["subtitle", config.subtitle || defaultConfig.subtitle],
+          ["roll_button_text", config.roll_button_text || defaultConfig.roll_button_text],
+          ["bet_button_text", config.bet_button_text || defaultConfig.bet_button_text]
+        ])
+      });
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b03ac238527fe0e',t:'MTc2NjExMzQ2NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
