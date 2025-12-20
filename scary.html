@@ -1,0 +1,1934 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Facility Escape</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #00ff00;
+      overflow: hidden;
+      height: 100%;
+    }
+
+    html {
+      height: 100%;
+    }
+
+    .game-wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+    }
+
+    .game-header {
+      padding: 20px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.8);
+      border-bottom: 2px solid #00ff00;
+    }
+
+    .game-title {
+      font-size: 32px;
+      margin: 0 0 10px 0;
+      text-shadow: 0 0 10px #00ff00;
+      letter-spacing: 3px;
+    }
+
+    .game-stats {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      font-size: 16px;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sword-cooldown {
+      width: 150px;
+      height: 20px;
+      background: #1a1a1a;
+      border: 2px solid #00ff00;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sword-cooldown-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00ff00 0%, #00aa00 100%);
+      transition: width 0.1s linear;
+    }
+
+    .sword-cooldown.ready {
+      box-shadow: 0 0 10px #00ff00;
+    }
+
+    .game-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #0f0f0f;
+    }
+
+    .canvas-wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #gameCanvas {
+      border: 2px solid #00ff00;
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+      image-rendering: pixelated;
+    }
+
+    .minimap {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 240px;
+      height: 180px;
+      border: 2px solid #00ff00;
+      background: rgba(0, 0, 0, 0.8);
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      z-index: 5;
+    }
+
+    .game-over-screen,
+    .win-screen,
+    .start-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .screen-title {
+      font-size: 48px;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px #00ff00;
+    }
+
+    .screen-message {
+      font-size: 20px;
+      margin-bottom: 30px;
+      text-align: center;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+
+    .game-button {
+      padding: 15px 40px;
+      font-size: 20px;
+      font-family: 'Courier New', monospace;
+      background: transparent;
+      color: #00ff00;
+      border: 2px solid #00ff00;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .game-button:hover {
+      background: #00ff00;
+      color: #0a0a0a;
+      box-shadow: 0 0 20px #00ff00;
+    }
+
+    .instructions {
+      margin-top: 20px;
+      font-size: 14px;
+      text-align: center;
+      opacity: 0.7;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .health-bar {
+      width: 150px;
+      height: 20px;
+      background: #1a1a1a;
+      border: 2px solid #00ff00;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .health-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00ff00 0%, #00aa00 100%);
+      transition: width 0.3s;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="game-wrapper">
+   <div class="game-header">
+    <h1 class="game-title" id="gameTitle">FACILITY ESCAPE</h1>
+    <div class="game-stats">
+     <div class="stat"><span>❤️ HEALTH:</span>
+      <div class="health-bar">
+       <div class="health-fill" id="healthFill"></div>
+      </div>
+     </div>
+     <div class="stat"><span>🔑 KEYS: <span id="keyCount">0</span>/6</span>
+     </div>
+     <div class="stat"><span>⏱️ TIME: <span id="timer">0</span>s</span>
+     </div>
+     <div class="stat"><span>⚔️ SWORD (1):</span>
+      <div class="sword-cooldown" id="swordCooldown">
+       <div class="sword-cooldown-fill" id="swordCooldownFill"></div>
+      </div>
+     </div>
+    </div>
+   </div>
+   <div class="game-container">
+    <div class="canvas-wrapper">
+     <canvas id="gameCanvas"></canvas>
+    </div>
+    <canvas id="minimap" class="minimap"></canvas>
+    <div class="start-screen" id="startScreen">
+     <div class="screen-title">
+      FACILITY ESCAPE
+     </div>
+     <div class="screen-message" id="instructionsText">
+      You wake up in a dark facility. A monster is hunting you. Find 3 keys to unlock the exit and escape before it catches you. Stay in the light to slow the monster down.
+     </div><button class="game-button" id="startButton">START GAME</button>
+     <div class="instructions">
+      Use WASD or Arrow Keys to move ����� Press 1 to swing sword ��� Avoid monsters and traps • Collect yellow keys • Reach the green exit
+     </div>
+    </div>
+    <div class="game-over-screen hidden" id="gameOverScreen">
+     <div class="screen-title">
+      GAME OVER
+     </div>
+     <div class="screen-message">
+      The monster caught you. You survived <span id="finalTime">0</span> seconds.
+     </div><button class="game-button" id="restartButton">TRY AGAIN</button>
+    </div>
+    <div class="win-screen hidden" id="winScreen">
+     <div class="screen-title">
+      ESCAPED!
+     </div>
+     <div class="screen-message">
+      You escaped the facility in <span id="winTime">0</span> seconds!
+     </div><button class="game-button" id="playAgainButton">PLAY AGAIN</button>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      game_title: "FACILITY ESCAPE",
+      instructions_text: "You wake up in a dark facility. A monster is hunting you. Find 3 keys to unlock the exit and escape before it catches you. Stay in the light to slow the monster down.",
+      background_color: "#0a0a0a",
+      surface_color: "#1a1a1a",
+      text_color: "#00ff00",
+      primary_action_color: "#00ff00",
+      secondary_action_color: "#00aa00",
+      font_family: "Courier New",
+      font_size: 16
+    };
+
+    async function onConfigChange(config) {
+      const gameTitle = document.getElementById('gameTitle');
+      const instructionsText = document.getElementById('instructionsText');
+      const gameWrapper = document.querySelector('.game-wrapper');
+      const gameHeader = document.querySelector('.game-header');
+      const gameButton = document.querySelectorAll('.game-button');
+      const screenTitle = document.querySelectorAll('.screen-title');
+      const statElements = document.querySelectorAll('.stat');
+      const healthBar = document.querySelectorAll('.health-bar');
+      const healthFill = document.querySelector('.health-fill');
+      const swordCooldownBar = document.querySelectorAll('.sword-cooldown');
+      const swordCooldownFill = document.querySelector('.sword-cooldown-fill');
+
+      const backgroundColor = config.background_color || defaultConfig.background_color;
+      const surfaceColor = config.surface_color || defaultConfig.surface_color;
+      const textColor = config.text_color || defaultConfig.text_color;
+      const primaryActionColor = config.primary_action_color || defaultConfig.primary_action_color;
+      const secondaryActionColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+      const fontFamily = config.font_family || defaultConfig.font_family;
+      const fontSize = config.font_size || defaultConfig.font_size;
+
+      gameTitle.textContent = config.game_title || defaultConfig.game_title;
+      instructionsText.textContent = config.instructions_text || defaultConfig.instructions_text;
+
+      gameWrapper.style.background = `linear-gradient(180deg, ${backgroundColor} 0%, ${surfaceColor} 100%)`;
+      gameHeader.style.background = `rgba(0, 0, 0, 0.8)`;
+      gameHeader.style.borderBottomColor = primaryActionColor;
+
+      document.body.style.fontFamily = `${fontFamily}, monospace`;
+      document.body.style.color = textColor;
+      document.body.style.background = backgroundColor;
+
+      gameTitle.style.fontSize = `${fontSize * 2}px`;
+      gameTitle.style.textShadow = `0 0 10px ${primaryActionColor}`;
+
+      statElements.forEach(stat => {
+        stat.style.fontSize = `${fontSize}px`;
+        stat.style.color = textColor;
+      });
+
+      healthBar.forEach(bar => {
+        bar.style.borderColor = primaryActionColor;
+        bar.style.background = surfaceColor;
+      });
+
+      healthFill.style.background = `linear-gradient(90deg, ${primaryActionColor} 0%, ${secondaryActionColor} 100%)`;
+
+      swordCooldownBar.forEach(bar => {
+        bar.style.borderColor = primaryActionColor;
+        bar.style.background = surfaceColor;
+      });
+
+      swordCooldownFill.style.background = `linear-gradient(90deg, ${primaryActionColor} 0%, ${secondaryActionColor} 100%)`;
+
+      gameButton.forEach(button => {
+        button.style.fontSize = `${fontSize * 1.25}px`;
+        button.style.color = primaryActionColor;
+        button.style.borderColor = primaryActionColor;
+        button.style.fontFamily = `${fontFamily}, monospace`;
+      });
+
+      screenTitle.forEach(title => {
+        title.style.fontSize = `${fontSize * 3}px`;
+        title.style.textShadow = `0 0 20px ${primaryActionColor}`;
+        title.style.color = textColor;
+      });
+
+      const canvas = document.getElementById('gameCanvas');
+      canvas.style.borderColor = primaryActionColor;
+      canvas.style.boxShadow = `0 0 20px ${primaryActionColor}40`;
+
+      const minimap = document.getElementById('minimap');
+      minimap.style.borderColor = primaryActionColor;
+      minimap.style.boxShadow = `0 0 10px ${primaryActionColor}80`;
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            {
+              get: () => config.background_color || defaultConfig.background_color,
+              set: (value) => {
+                config.background_color = value;
+                window.elementSdk.setConfig({ background_color: value });
+              }
+            },
+            {
+              get: () => config.surface_color || defaultConfig.surface_color,
+              set: (value) => {
+                config.surface_color = value;
+                window.elementSdk.setConfig({ surface_color: value });
+              }
+            },
+            {
+              get: () => config.text_color || defaultConfig.text_color,
+              set: (value) => {
+                config.text_color = value;
+                window.elementSdk.setConfig({ text_color: value });
+              }
+            },
+            {
+              get: () => config.primary_action_color || defaultConfig.primary_action_color,
+              set: (value) => {
+                config.primary_action_color = value;
+                window.elementSdk.setConfig({ primary_action_color: value });
+              }
+            },
+            {
+              get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+              set: (value) => {
+                config.secondary_action_color = value;
+                window.elementSdk.setConfig({ secondary_action_color: value });
+              }
+            }
+          ],
+          borderables: [],
+          fontEditable: {
+            get: () => config.font_family || defaultConfig.font_family,
+            set: (value) => {
+              config.font_family = value;
+              window.elementSdk.setConfig({ font_family: value });
+            }
+          },
+          fontSizeable: {
+            get: () => config.font_size || defaultConfig.font_size,
+            set: (value) => {
+              config.font_size = value;
+              window.elementSdk.setConfig({ font_size: value });
+            }
+          }
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ["game_title", config.game_title || defaultConfig.game_title],
+          ["instructions_text", config.instructions_text || defaultConfig.instructions_text]
+        ])
+      });
+    }
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    const minimapCanvas = document.getElementById('minimap');
+    const minimapCtx = minimapCanvas.getContext('2d');
+    minimapCanvas.width = 240;
+    minimapCanvas.height = 180;
+    
+    canvas.width = 1200;
+    canvas.height = 900;
+
+    const TILE_SIZE = 40;
+    const PLAYER_SIZE = 20;
+    const MONSTER_SIZE = 25;
+    const HENCHMAN_SIZE = 18;
+    const KEY_SIZE = 15;
+    const EXIT_SIZE = 30;
+    const MAP_WIDTH = 2400;
+    const MAP_HEIGHT = 1800;
+
+    let gameState = {
+      player: { x: 100, y: 100, health: 100 },
+      ghostMonster: { x: 700, y: 500, speed: 1.8, stunned: false, stunEndTime: 0 },
+      wallMonster: { x: 1200, y: 900, speed: 2.5, stunned: false, stunEndTime: 0 },
+      trapLayer: { x: 1500, y: 1200, speed: 1.5, stunned: false, stunEndTime: 0, lastTrapTime: 0, trapCooldown: 5000 },
+      shooter: { x: 1800, y: 1400, speed: 1.2, stunned: false, stunEndTime: 0, lastShootTime: 0, shootCooldown: 3000, shootRange: 400 },
+      spawner: { x: 1000, y: 600, speed: 0.8, stunned: false, stunEndTime: 0, lastSpawnTime: 0, spawnCooldown: 8000 },
+      henchmen: [],
+      projectiles: [],
+      keys: [],
+      keysCollected: 0,
+      totalKeys: 6,
+      exit: { x: 750, y: 550 },
+      walls: [],
+      lights: [],
+      doorways: [],
+      traps: [],
+      gameRunning: false,
+      startTime: 0,
+      elapsedTime: 0,
+      camera: { x: 0, y: 0 }
+    };
+
+    const keys = {
+      w: false, a: false, s: false, d: false,
+      ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false
+    };
+
+    let swordAttack = {
+      active: false,
+      angle: 0,
+      duration: 300,
+      startTime: 0,
+      cooldown: 10000,
+      lastAttackTime: -10000
+    };
+
+    let mouseX = 0;
+    let mouseY = 0;
+
+    function generateLevel() {
+      gameState.walls = [];
+      gameState.lights = [];
+      gameState.keys = [];
+      gameState.rooms = [];
+      gameState.doorways = [];
+      gameState.traps = [];
+
+      const gridCols = 5;
+      const gridRows = 5;
+      const cellWidth = (MAP_WIDTH - 100) / gridCols;
+      const cellHeight = (MAP_HEIGHT - 100) / gridRows;
+
+      for (let row = 0; row < gridRows; row++) {
+        for (let col = 0; col < gridCols; col++) {
+          const baseX = 50 + col * cellWidth;
+          const baseY = 50 + row * cellHeight;
+          
+          const minSize = 0.7;
+          const widthFactor = minSize + Math.random() * (1 - minSize);
+          const heightFactor = minSize + Math.random() * (1 - minSize);
+          
+          const roomW = Math.floor(cellWidth * widthFactor);
+          const roomH = Math.floor(cellHeight * heightFactor);
+          const roomX = baseX + Math.floor(Math.random() * (cellWidth - roomW));
+          const roomY = baseY + Math.floor(Math.random() * (cellHeight - roomH));
+
+          const room = { x: roomX, y: roomY, w: roomW, h: roomH, row, col };
+          gameState.rooms.push(room);
+
+          const needsRight = col < gridCols - 1;
+          const needsBottom = row < gridRows - 1;
+          const needsLeft = col > 0;
+          const needsTop = row > 0;
+
+          const doorWidth = 60;
+
+          if (needsTop) {
+            const doorPos = roomX + Math.random() * (roomW - doorWidth);
+            gameState.walls.push({ x: roomX, y: roomY, w: doorPos - roomX, h: 5 });
+            gameState.walls.push({ x: doorPos + doorWidth, y: roomY, w: roomX + roomW - (doorPos + doorWidth), h: 5 });
+            gameState.doorways.push({ x: doorPos + doorWidth / 2, y: roomY, type: 'horizontal' });
+          } else {
+            gameState.walls.push({ x: roomX, y: roomY, w: roomW, h: 5 });
+          }
+
+          if (needsBottom) {
+            const doorPos = roomX + Math.random() * (roomW - doorWidth);
+            gameState.walls.push({ x: roomX, y: roomY + roomH, w: doorPos - roomX, h: 5 });
+            gameState.walls.push({ x: doorPos + doorWidth, y: roomY + roomH, w: roomX + roomW - (doorPos + doorWidth), h: 5 });
+            gameState.doorways.push({ x: doorPos + doorWidth / 2, y: roomY + roomH, type: 'horizontal' });
+          } else {
+            gameState.walls.push({ x: roomX, y: roomY + roomH, w: roomW, h: 5 });
+          }
+
+          if (needsLeft) {
+            const doorPos = roomY + Math.random() * (roomH - doorWidth);
+            gameState.walls.push({ x: roomX, y: roomY, w: 5, h: doorPos - roomY });
+            gameState.walls.push({ x: roomX, y: doorPos + doorWidth, w: 5, h: roomY + roomH - (doorPos + doorWidth) });
+            gameState.doorways.push({ x: roomX, y: doorPos + doorWidth / 2, type: 'vertical' });
+          } else {
+            gameState.walls.push({ x: roomX, y: roomY, w: 5, h: roomH });
+          }
+
+          if (needsRight) {
+            const doorPos = roomY + Math.random() * (roomH - doorWidth);
+            gameState.walls.push({ x: roomX + roomW, y: roomY, w: 5, h: doorPos - roomY });
+            gameState.walls.push({ x: roomX + roomW, y: doorPos + doorWidth, w: 5, h: roomY + roomH - (doorPos + doorWidth) });
+            gameState.doorways.push({ x: roomX + roomW, y: doorPos + doorWidth / 2, type: 'vertical' });
+          } else {
+            gameState.walls.push({ x: roomX + roomW, y: roomY, w: 5, h: roomH });
+          }
+
+          const lightX = roomX + roomW / 2;
+          const lightY = roomY + roomH / 2;
+          const lightRadius = 80 + Math.random() * 50;
+          gameState.lights.push({ x: lightX, y: lightY, radius: lightRadius });
+        }
+      }
+
+      const availableRooms = [];
+      for (let i = 1; i < gameState.rooms.length; i++) {
+        availableRooms.push(i);
+      }
+      const keyRooms = availableRooms.sort(() => Math.random() - 0.5).slice(0, 6);
+      keyRooms.forEach(roomIndex => {
+        const room = gameState.rooms[roomIndex];
+        const keyX = room.x + 30 + Math.random() * (room.w - 60);
+        const keyY = room.y + 30 + Math.random() * (room.h - 60);
+        gameState.keys.push({ x: keyX, y: keyY, collected: false });
+      });
+    }
+
+    function checkCollision(rect1, rect2) {
+      return rect1.x < rect2.x + rect2.w &&
+             rect1.x + rect1.w > rect2.x &&
+             rect1.y < rect2.y + rect2.h &&
+             rect1.y + rect1.h > rect2.y;
+    }
+
+    function isInLight(x, y) {
+      return gameState.lights.some(light => {
+        const dx = x - light.x;
+        const dy = y - light.y;
+        return Math.sqrt(dx * dx + dy * dy) < light.radius;
+      });
+    }
+
+    function updateCamera() {
+      gameState.camera.x = gameState.player.x - canvas.width / 2 + PLAYER_SIZE / 2;
+      gameState.camera.y = gameState.player.y - canvas.height / 2 + PLAYER_SIZE / 2;
+
+      gameState.camera.x = Math.max(0, Math.min(gameState.camera.x, MAP_WIDTH - canvas.width));
+      gameState.camera.y = Math.max(0, Math.min(gameState.camera.y, MAP_HEIGHT - canvas.height));
+    }
+
+    function updatePlayer() {
+      const speed = 3;
+      
+      let moveX = 0;
+      let moveY = 0;
+
+      if (keys.w || keys.ArrowUp) moveY -= 1;
+      if (keys.s || keys.ArrowDown) moveY += 1;
+      if (keys.a || keys.ArrowLeft) moveX -= 1;
+      if (keys.d || keys.ArrowRight) moveX += 1;
+
+      // Normalize diagonal movement
+      if (moveX !== 0 && moveY !== 0) {
+        const length = Math.sqrt(moveX * moveX + moveY * moveY);
+        moveX /= length;
+        moveY /= length;
+      }
+
+      let newX = gameState.player.x + moveX * speed;
+      let newY = gameState.player.y + moveY * speed;
+
+      const playerRect = { x: newX, y: newY, w: PLAYER_SIZE, h: PLAYER_SIZE };
+      let collision = false;
+
+      for (let wall of gameState.walls) {
+        if (checkCollision(playerRect, wall)) {
+          collision = true;
+          break;
+        }
+      }
+
+      if (!collision && newX >= 0 && newX <= MAP_WIDTH - PLAYER_SIZE && 
+          newY >= 0 && newY <= MAP_HEIGHT - PLAYER_SIZE) {
+        gameState.player.x = newX;
+        gameState.player.y = newY;
+      }
+
+      // Update sword attack
+      if (swordAttack.active) {
+        const elapsed = Date.now() - swordAttack.startTime;
+        if (elapsed >= swordAttack.duration) {
+          swordAttack.active = false;
+        }
+      }
+
+      // Update cooldown UI
+      const now = Date.now();
+      const timeSinceLastAttack = now - swordAttack.lastAttackTime;
+      const cooldownProgress = Math.min(timeSinceLastAttack / swordAttack.cooldown, 1);
+      const swordCooldownFill = document.getElementById('swordCooldownFill');
+      const swordCooldownBar = document.getElementById('swordCooldown');
+      
+      swordCooldownFill.style.width = (cooldownProgress * 100) + '%';
+      
+      if (cooldownProgress >= 1) {
+        swordCooldownBar.classList.add('ready');
+      } else {
+        swordCooldownBar.classList.remove('ready');
+      }
+
+      updateCamera();
+
+      gameState.keys.forEach(key => {
+        if (!key.collected) {
+          const keyRect = { x: key.x - KEY_SIZE/2, y: key.y - KEY_SIZE/2, w: KEY_SIZE, h: KEY_SIZE };
+          if (checkCollision(playerRect, keyRect)) {
+            key.collected = true;
+            gameState.keysCollected++;
+            document.getElementById('keyCount').textContent = gameState.keysCollected;
+          }
+        }
+      });
+
+      if (gameState.keysCollected === gameState.totalKeys) {
+        const exitRect = { x: gameState.exit.x - EXIT_SIZE/2, y: gameState.exit.y - EXIT_SIZE/2, w: EXIT_SIZE, h: EXIT_SIZE };
+        if (checkCollision(playerRect, exitRect)) {
+          winGame();
+        }
+      }
+    }
+
+    function checkSwordHit(monster, size = MONSTER_SIZE) {
+      if (!swordAttack.active) return false;
+
+      const playerCenterX = gameState.player.x + PLAYER_SIZE / 2;
+      const playerCenterY = gameState.player.y + PLAYER_SIZE / 2;
+      const monsterCenterX = monster.x + size / 2;
+      const monsterCenterY = monster.y + size / 2;
+
+      const dx = monsterCenterX - playerCenterX;
+      const dy = monsterCenterY - playerCenterY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Check if monster is within sword range
+      const swordRange = 60;
+      if (distance > swordRange) return false;
+
+      // Check if monster is in the sword's swing arc
+      const angleToMonster = Math.atan2(dy, dx);
+      let angleDiff = Math.abs(angleToMonster - swordAttack.angle);
+      
+      // Normalize angle difference to 0-PI range
+      if (angleDiff > Math.PI) {
+        angleDiff = 2 * Math.PI - angleDiff;
+      }
+      
+      // Allow 90 degree arc (PI/2)
+      return angleDiff < Math.PI / 2;
+    }
+
+    function updateGhostMonster() {
+      // Check for stun
+      if (gameState.ghostMonster.stunned) {
+        if (Date.now() >= gameState.ghostMonster.stunEndTime) {
+          gameState.ghostMonster.stunned = false;
+        } else {
+          return; // Skip movement while stunned
+        }
+      }
+
+      // Check if hit by sword
+      if (checkSwordHit(gameState.ghostMonster) && !gameState.ghostMonster.stunned) {
+        gameState.ghostMonster.stunned = true;
+        gameState.ghostMonster.stunEndTime = Date.now() + 2000; // Stun for 2 seconds
+        return;
+      }
+
+      const dx = gameState.player.x - gameState.ghostMonster.x;
+      const dy = gameState.player.y - gameState.ghostMonster.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > 0) {
+        let speed = gameState.ghostMonster.speed;
+        
+        // Speed boost per key collected
+        speed *= (1 + gameState.keysCollected * 0.15);
+        
+        if (isInLight(gameState.ghostMonster.x, gameState.ghostMonster.y)) {
+          speed *= 0.5;
+        }
+
+        const directAngle = Math.atan2(dy, dx);
+        let moveX = Math.cos(directAngle) * speed;
+        let moveY = Math.sin(directAngle) * speed;
+        let newX = gameState.ghostMonster.x + moveX;
+        let newY = gameState.ghostMonster.y + moveY;
+
+        // Ghost phases through walls - no collision check
+        if (newX >= 0 && newX <= MAP_WIDTH - MONSTER_SIZE && 
+            newY >= 0 && newY <= MAP_HEIGHT - MONSTER_SIZE) {
+          gameState.ghostMonster.x = newX;
+          gameState.ghostMonster.y = newY;
+        }
+      }
+
+      const playerRect = { x: gameState.player.x, y: gameState.player.y, w: PLAYER_SIZE, h: PLAYER_SIZE };
+      const monsterRect = { x: gameState.ghostMonster.x, y: gameState.ghostMonster.y, w: MONSTER_SIZE, h: MONSTER_SIZE };
+
+      if (checkCollision(playerRect, monsterRect)) {
+        gameState.player.health -= 2;
+        document.getElementById('healthFill').style.width = gameState.player.health + '%';
+        
+        if (gameState.player.health <= 0) {
+          gameOver();
+        }
+      }
+    }
+
+    function updateWallMonster() {
+      // Check for stun
+      if (gameState.wallMonster.stunned) {
+        if (Date.now() >= gameState.wallMonster.stunEndTime) {
+          gameState.wallMonster.stunned = false;
+        } else {
+          return; // Skip movement while stunned
+        }
+      }
+
+      // Check if hit by sword
+      if (checkSwordHit(gameState.wallMonster) && !gameState.wallMonster.stunned) {
+        gameState.wallMonster.stunned = true;
+        gameState.wallMonster.stunEndTime = Date.now() + 2000; // Stun for 2 seconds
+        return;
+      }
+
+      const dx = gameState.player.x - gameState.wallMonster.x;
+      const dy = gameState.player.y - gameState.wallMonster.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > 0) {
+        let speed = gameState.wallMonster.speed;
+        
+        // Speed boost per key collected
+        speed *= (1 + gameState.keysCollected * 0.15);
+        
+        if (isInLight(gameState.wallMonster.x, gameState.wallMonster.y)) {
+          speed *= 0.5;
+        }
+
+        // After 6 keys, phase through walls like ghost
+        if (gameState.keysCollected >= gameState.totalKeys) {
+          const directAngle = Math.atan2(dy, dx);
+          let moveX = Math.cos(directAngle) * speed;
+          let moveY = Math.sin(directAngle) * speed;
+          let newX = gameState.wallMonster.x + moveX;
+          let newY = gameState.wallMonster.y + moveY;
+
+          if (newX >= 0 && newX <= MAP_WIDTH - MONSTER_SIZE && 
+              newY >= 0 && newY <= MAP_HEIGHT - MONSTER_SIZE) {
+            gameState.wallMonster.x = newX;
+            gameState.wallMonster.y = newY;
+          }
+        } else {
+          // Navigate through doorways
+          const directAngle = Math.atan2(dy, dx);
+          let moveX = Math.cos(directAngle) * speed;
+          let moveY = Math.sin(directAngle) * speed;
+          let newX = gameState.wallMonster.x + moveX;
+          let newY = gameState.wallMonster.y + moveY;
+
+          const monsterRect = { x: newX, y: newY, w: MONSTER_SIZE, h: MONSTER_SIZE };
+          let collision = false;
+
+          for (let wall of gameState.walls) {
+            if (checkCollision(monsterRect, wall)) {
+              collision = true;
+              break;
+            }
+          }
+
+          // If blocked, navigate to nearest doorway
+          if (collision) {
+            let nearestDoorway = null;
+            let nearestDist = Infinity;
+            
+            gameState.doorways.forEach(doorway => {
+              const ddx = doorway.x - gameState.wallMonster.x;
+              const ddy = doorway.y - gameState.wallMonster.y;
+              const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+              if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestDoorway = doorway;
+              }
+            });
+            
+            if (nearestDoorway) {
+              const doorAngle = Math.atan2(nearestDoorway.y - gameState.wallMonster.y, nearestDoorway.x - gameState.wallMonster.x);
+              moveX = Math.cos(doorAngle) * speed;
+              moveY = Math.sin(doorAngle) * speed;
+              newX = gameState.wallMonster.x + moveX;
+              newY = gameState.wallMonster.y + moveY;
+              
+              monsterRect.x = newX;
+              monsterRect.y = newY;
+              collision = false;
+              
+              for (let wall of gameState.walls) {
+                if (checkCollision(monsterRect, wall)) {
+                  collision = true;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (!collision && newX >= 0 && newX <= MAP_WIDTH - MONSTER_SIZE && 
+              newY >= 0 && newY <= MAP_HEIGHT - MONSTER_SIZE) {
+            gameState.wallMonster.x = newX;
+            gameState.wallMonster.y = newY;
+          }
+        }
+      }
+
+      const playerRect = { x: gameState.player.x, y: gameState.player.y, w: PLAYER_SIZE, h: PLAYER_SIZE };
+      const monsterRect = { x: gameState.wallMonster.x, y: gameState.wallMonster.y, w: MONSTER_SIZE, h: MONSTER_SIZE };
+
+      if (checkCollision(playerRect, monsterRect)) {
+        gameState.player.health -= 2;
+        document.getElementById('healthFill').style.width = gameState.player.health + '%';
+        
+        if (gameState.player.health <= 0) {
+          gameOver();
+        }
+      }
+    }
+
+    function updateTrapLayer() {
+      // Check for stun
+      if (gameState.trapLayer.stunned) {
+        if (Date.now() >= gameState.trapLayer.stunEndTime) {
+          gameState.trapLayer.stunned = false;
+        } else {
+          return; // Skip movement while stunned
+        }
+      }
+
+      // Check if hit by sword
+      if (checkSwordHit(gameState.trapLayer) && !gameState.trapLayer.stunned) {
+        gameState.trapLayer.stunned = true;
+        gameState.trapLayer.stunEndTime = Date.now() + 2000; // Stun for 2 seconds
+        return;
+      }
+
+      // Find nearest doorway WITHOUT a trap
+      let nearestDoorway = null;
+      let nearestDistance = Infinity;
+
+      gameState.doorways.forEach(doorway => {
+        // Check if this doorway already has a trap
+        const hasTrap = gameState.traps.some(trap => {
+          const tdx = trap.x - doorway.x;
+          const tdy = trap.y - doorway.y;
+          return Math.sqrt(tdx * tdx + tdy * tdy) < 40;
+        });
+        
+        // Only consider doorways without traps
+        if (!hasTrap) {
+          const dx = doorway.x - gameState.trapLayer.x;
+          const dy = doorway.y - gameState.trapLayer.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestDoorway = doorway;
+          }
+        }
+      });
+
+      if (nearestDoorway) {
+        const dx = nearestDoorway.x - gameState.trapLayer.x;
+        const dy = nearestDoorway.y - gameState.trapLayer.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // If close to doorway, place trap
+        if (distance < 50) {
+          const now = Date.now();
+          if (now - gameState.trapLayer.lastTrapTime >= gameState.trapLayer.trapCooldown) {
+            gameState.traps.push({ 
+              x: nearestDoorway.x, 
+              y: nearestDoorway.y, 
+              triggered: false 
+            });
+            gameState.trapLayer.lastTrapTime = now;
+          }
+        } else {
+          // Move towards doorway
+          let speed = gameState.trapLayer.speed;
+          
+          // Speed boost per key collected
+          speed *= (1 + gameState.keysCollected * 0.15);
+          
+          if (isInLight(gameState.trapLayer.x, gameState.trapLayer.y)) {
+            speed *= 0.5;
+          }
+
+          const directAngle = Math.atan2(dy, dx);
+          let moveX = Math.cos(directAngle) * speed;
+          let moveY = Math.sin(directAngle) * speed;
+          let newX = gameState.trapLayer.x + moveX;
+          let newY = gameState.trapLayer.y + moveY;
+
+          // After 6 keys, phase through walls
+          if (gameState.keysCollected >= gameState.totalKeys) {
+            if (newX >= 0 && newX <= MAP_WIDTH - MONSTER_SIZE && 
+                newY >= 0 && newY <= MAP_HEIGHT - MONSTER_SIZE) {
+              gameState.trapLayer.x = newX;
+              gameState.trapLayer.y = newY;
+            }
+          } else {
+            const monsterRect = { x: newX, y: newY, w: MONSTER_SIZE, h: MONSTER_SIZE };
+            let collision = false;
+
+            for (let wall of gameState.walls) {
+              if (checkCollision(monsterRect, wall)) {
+                collision = true;
+                break;
+              }
+            }
+
+            // If blocked, navigate to nearest doorway to get around obstacle
+            if (collision) {
+              let nearestNavDoorway = null;
+              let nearestNavDist = Infinity;
+              
+              gameState.doorways.forEach(doorway => {
+                const ddx = doorway.x - gameState.trapLayer.x;
+                const ddy = doorway.y - gameState.trapLayer.y;
+                const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+                if (dist < nearestNavDist) {
+                  nearestNavDist = dist;
+                  nearestNavDoorway = doorway;
+                }
+              });
+              
+              if (nearestNavDoorway) {
+                const doorAngle = Math.atan2(nearestNavDoorway.y - gameState.trapLayer.y, nearestNavDoorway.x - gameState.trapLayer.x);
+                moveX = Math.cos(doorAngle) * speed;
+                moveY = Math.sin(doorAngle) * speed;
+                newX = gameState.trapLayer.x + moveX;
+                newY = gameState.trapLayer.y + moveY;
+                
+                monsterRect.x = newX;
+                monsterRect.y = newY;
+                collision = false;
+                
+                for (let wall of gameState.walls) {
+                  if (checkCollision(monsterRect, wall)) {
+                    collision = true;
+                    break;
+                  }
+                }
+              }
+            }
+
+            if (!collision && newX >= 0 && newX <= MAP_WIDTH - MONSTER_SIZE && 
+                newY >= 0 && newY <= MAP_HEIGHT - MONSTER_SIZE) {
+              gameState.trapLayer.x = newX;
+              gameState.trapLayer.y = newY;
+            }
+          }
+        }
+      }
+
+      // Check if player steps on trap
+      const playerRect = { x: gameState.player.x, y: gameState.player.y, w: PLAYER_SIZE, h: PLAYER_SIZE };
+      gameState.traps.forEach(trap => {
+        if (!trap.triggered) {
+          const trapRect = { x: trap.x - 15, y: trap.y - 15, w: 30, h: 30 };
+          if (checkCollision(playerRect, trapRect)) {
+            trap.triggered = true;
+            gameState.player.health -= 20;
+            document.getElementById('healthFill').style.width = gameState.player.health + '%';
+            
+            if (gameState.player.health <= 0) {
+              gameOver();
+            }
+          }
+        }
+      });
+    }
+
+    function updateShooter() {
+      // Check for stun
+      if (gameState.shooter.stunned) {
+        if (Date.now() >= gameState.shooter.stunEndTime) {
+          gameState.shooter.stunned = false;
+        } else {
+          return; // Skip movement while stunned
+        }
+      }
+
+      // Check if hit by sword
+      if (checkSwordHit(gameState.shooter) && !gameState.shooter.stunned) {
+        gameState.shooter.stunned = true;
+        gameState.shooter.stunEndTime = Date.now() + 2000; // Stun for 2 seconds
+        return;
+      }
+
+      const dx = gameState.player.x - gameState.shooter.x;
+      const dy = gameState.player.y - gameState.shooter.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Check if player is in range to shoot
+      if (distance <= gameState.shooter.shootRange) {
+        const now = Date.now();
+        if (now - gameState.shooter.lastShootTime >= gameState.shooter.shootCooldown) {
+          // Shoot projectile
+          const angle = Math.atan2(dy, dx);
+          gameState.projectiles.push({
+            x: gameState.shooter.x + MONSTER_SIZE / 2,
+            y: gameState.shooter.y + MONSTER_SIZE / 2,
+            vx: Math.cos(angle) * 4,
+            vy: Math.sin(angle) * 4,
+            active: true
+          });
+          gameState.shooter.lastShootTime = now;
+        }
+      }
+
+      // Move towards player (slowly)
+      if (distance > 0) {
+        let speed = gameState.shooter.speed;
+        
+        // Speed boost per key collected
+        speed *= (1 + gameState.keysCollected * 0.15);
+        
+        if (isInLight(gameState.shooter.x, gameState.shooter.y)) {
+          speed *= 0.5;
+        }
+
+        const directAngle = Math.atan2(dy, dx);
+        let moveX = Math.cos(directAngle) * speed;
+        let moveY = Math.sin(directAngle) * speed;
+        let newX = gameState.shooter.x + moveX;
+        let newY = gameState.shooter.y + moveY;
+
+        // After 6 keys, phase through walls
+        if (gameState.keysCollected >= gameState.totalKeys) {
+          if (newX >= 0 && newX <= MAP_WIDTH - MONSTER_SIZE && 
+              newY >= 0 && newY <= MAP_HEIGHT - MONSTER_SIZE) {
+            gameState.shooter.x = newX;
+            gameState.shooter.y = newY;
+          }
+        } else {
+          const monsterRect = { x: newX, y: newY, w: MONSTER_SIZE, h: MONSTER_SIZE };
+          let collision = false;
+
+          for (let wall of gameState.walls) {
+            if (checkCollision(monsterRect, wall)) {
+              collision = true;
+              break;
+            }
+          }
+
+          // If blocked, navigate to nearest doorway
+          if (collision) {
+            let nearestDoorway = null;
+            let nearestDist = Infinity;
+            
+            gameState.doorways.forEach(doorway => {
+              const ddx = doorway.x - gameState.shooter.x;
+              const ddy = doorway.y - gameState.shooter.y;
+              const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+              if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestDoorway = doorway;
+              }
+            });
+            
+            if (nearestDoorway) {
+              const doorAngle = Math.atan2(nearestDoorway.y - gameState.shooter.y, nearestDoorway.x - gameState.shooter.x);
+              moveX = Math.cos(doorAngle) * speed;
+              moveY = Math.sin(doorAngle) * speed;
+              newX = gameState.shooter.x + moveX;
+              newY = gameState.shooter.y + moveY;
+              
+              monsterRect.x = newX;
+              monsterRect.y = newY;
+              collision = false;
+              
+              for (let wall of gameState.walls) {
+                if (checkCollision(monsterRect, wall)) {
+                  collision = true;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (!collision && newX >= 0 && newX <= MAP_WIDTH - MONSTER_SIZE && 
+              newY >= 0 && newY <= MAP_HEIGHT - MONSTER_SIZE) {
+            gameState.shooter.x = newX;
+            gameState.shooter.y = newY;
+          }
+        }
+      }
+
+      const playerRect = { x: gameState.player.x, y: gameState.player.y, w: PLAYER_SIZE, h: PLAYER_SIZE };
+      const monsterRect = { x: gameState.shooter.x, y: gameState.shooter.y, w: MONSTER_SIZE, h: MONSTER_SIZE };
+
+      if (checkCollision(playerRect, monsterRect)) {
+        gameState.player.health -= 2;
+        document.getElementById('healthFill').style.width = gameState.player.health + '%';
+        
+        if (gameState.player.health <= 0) {
+          gameOver();
+        }
+      }
+    }
+
+    function updateSpawner() {
+      // Check for stun
+      if (gameState.spawner.stunned) {
+        if (Date.now() >= gameState.spawner.stunEndTime) {
+          gameState.spawner.stunned = false;
+        } else {
+          return; // Skip movement while stunned
+        }
+      }
+
+      // Check if hit by sword
+      if (checkSwordHit(gameState.spawner) && !gameState.spawner.stunned) {
+        gameState.spawner.stunned = true;
+        gameState.spawner.stunEndTime = Date.now() + 2000; // Stun for 2 seconds
+        return;
+      }
+
+      const dx = gameState.player.x - gameState.spawner.x;
+      const dy = gameState.player.y - gameState.spawner.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Spawn henchmen periodically
+      const now = Date.now();
+      if (now - gameState.spawner.lastSpawnTime >= gameState.spawner.spawnCooldown) {
+        // Spawn 2 henchmen around the spawner
+        for (let i = 0; i < 2; i++) {
+          const angle = (Math.PI * 2 * i) / 2 + Math.random() * Math.PI;
+          const spawnDistance = 40;
+          gameState.henchmen.push({
+            x: gameState.spawner.x + Math.cos(angle) * spawnDistance,
+            y: gameState.spawner.y + Math.sin(angle) * spawnDistance,
+            speed: 2.0,
+            spawnTime: now,
+            lifetime: 10000, // 10 seconds
+            active: true
+          });
+        }
+        gameState.spawner.lastSpawnTime = now;
+      }
+
+      // Move slowly away from player (defensive behavior)
+      if (distance > 0 && distance < 300) {
+        let speed = gameState.spawner.speed;
+        
+        // Speed boost per key collected
+        speed *= (1 + gameState.keysCollected * 0.15);
+        
+        if (isInLight(gameState.spawner.x, gameState.spawner.y)) {
+          speed *= 0.5;
+        }
+
+        // Move away from player
+        const directAngle = Math.atan2(dy, dx);
+        let moveX = -Math.cos(directAngle) * speed;
+        let moveY = -Math.sin(directAngle) * speed;
+        let newX = gameState.spawner.x + moveX;
+        let newY = gameState.spawner.y + moveY;
+
+        // After 6 keys, phase through walls
+        if (gameState.keysCollected >= gameState.totalKeys) {
+          if (newX >= 0 && newX <= MAP_WIDTH - MONSTER_SIZE && 
+              newY >= 0 && newY <= MAP_HEIGHT - MONSTER_SIZE) {
+            gameState.spawner.x = newX;
+            gameState.spawner.y = newY;
+          }
+        } else {
+          const monsterRect = { x: newX, y: newY, w: MONSTER_SIZE, h: MONSTER_SIZE };
+          let collision = false;
+
+          for (let wall of gameState.walls) {
+            if (checkCollision(monsterRect, wall)) {
+              collision = true;
+              break;
+            }
+          }
+
+          // If blocked while fleeing, navigate to nearest doorway
+          if (collision) {
+            let nearestDoorway = null;
+            let nearestDist = Infinity;
+            
+            gameState.doorways.forEach(doorway => {
+              const ddx = doorway.x - gameState.spawner.x;
+              const ddy = doorway.y - gameState.spawner.y;
+              const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+              if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestDoorway = doorway;
+              }
+            });
+            
+            if (nearestDoorway) {
+              const doorAngle = Math.atan2(nearestDoorway.y - gameState.spawner.y, nearestDoorway.x - gameState.spawner.x);
+              moveX = Math.cos(doorAngle) * speed;
+              moveY = Math.sin(doorAngle) * speed;
+              newX = gameState.spawner.x + moveX;
+              newY = gameState.spawner.y + moveY;
+              
+              monsterRect.x = newX;
+              monsterRect.y = newY;
+              collision = false;
+              
+              for (let wall of gameState.walls) {
+                if (checkCollision(monsterRect, wall)) {
+                  collision = true;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (!collision && newX >= 0 && newX <= MAP_WIDTH - MONSTER_SIZE && 
+              newY >= 0 && newY <= MAP_HEIGHT - MONSTER_SIZE) {
+            gameState.spawner.x = newX;
+            gameState.spawner.y = newY;
+          }
+        }
+      }
+
+      // Spawner doesn't directly damage player
+    }
+
+    function updateHenchmen() {
+      const now = Date.now();
+      const playerRect = { x: gameState.player.x, y: gameState.player.y, w: PLAYER_SIZE, h: PLAYER_SIZE };
+
+      gameState.henchmen.forEach(henchman => {
+        if (!henchman.active) return;
+
+        // Check if lifetime expired
+        if (now - henchman.spawnTime >= henchman.lifetime) {
+          henchman.active = false;
+          return;
+        }
+
+        // Check if hit by sword
+        if (checkSwordHit(henchman, HENCHMAN_SIZE)) {
+          henchman.active = false;
+          return;
+        }
+
+        // Move towards player
+        const dx = gameState.player.x - henchman.x;
+        const dy = gameState.player.y - henchman.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > 0) {
+          let speed = henchman.speed;
+          
+          // Speed boost per key collected
+          speed *= (1 + gameState.keysCollected * 0.15);
+          
+          if (isInLight(henchman.x, henchman.y)) {
+            speed *= 0.5;
+          }
+
+          const directAngle = Math.atan2(dy, dx);
+          let moveX = Math.cos(directAngle) * speed;
+          let moveY = Math.sin(directAngle) * speed;
+          let newX = henchman.x + moveX;
+          let newY = henchman.y + moveY;
+
+          // After 6 keys, phase through walls
+          if (gameState.keysCollected >= gameState.totalKeys) {
+            if (newX >= 0 && newX <= MAP_WIDTH - HENCHMAN_SIZE && 
+                newY >= 0 && newY <= MAP_HEIGHT - HENCHMAN_SIZE) {
+              henchman.x = newX;
+              henchman.y = newY;
+            }
+          } else {
+            const henchmanRect = { x: newX, y: newY, w: HENCHMAN_SIZE, h: HENCHMAN_SIZE };
+            let collision = false;
+
+            for (let wall of gameState.walls) {
+              if (checkCollision(henchmanRect, wall)) {
+                collision = true;
+                break;
+              }
+            }
+
+            // If blocked, navigate to nearest doorway
+            if (collision) {
+              let nearestDoorway = null;
+              let nearestDist = Infinity;
+              
+              gameState.doorways.forEach(doorway => {
+                const ddx = doorway.x - henchman.x;
+                const ddy = doorway.y - henchman.y;
+                const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+                if (dist < nearestDist) {
+                  nearestDist = dist;
+                  nearestDoorway = doorway;
+                }
+              });
+              
+              if (nearestDoorway) {
+                const doorAngle = Math.atan2(nearestDoorway.y - henchman.y, nearestDoorway.x - henchman.x);
+                moveX = Math.cos(doorAngle) * speed;
+                moveY = Math.sin(doorAngle) * speed;
+                newX = henchman.x + moveX;
+                newY = henchman.y + moveY;
+                
+                henchmanRect.x = newX;
+                henchmanRect.y = newY;
+                collision = false;
+                
+                for (let wall of gameState.walls) {
+                  if (checkCollision(henchmanRect, wall)) {
+                    collision = true;
+                    break;
+                  }
+                }
+              }
+            }
+
+            if (!collision && newX >= 0 && newX <= MAP_WIDTH - HENCHMAN_SIZE && 
+                newY >= 0 && newY <= MAP_HEIGHT - HENCHMAN_SIZE) {
+              henchman.x = newX;
+              henchman.y = newY;
+            }
+          }
+        }
+
+        // Check collision with player
+        const henchmanRect = { x: henchman.x, y: henchman.y, w: HENCHMAN_SIZE, h: HENCHMAN_SIZE };
+        if (checkCollision(playerRect, henchmanRect)) {
+          gameState.player.health -= 1.5;
+          document.getElementById('healthFill').style.width = gameState.player.health + '%';
+          
+          if (gameState.player.health <= 0) {
+            gameOver();
+          }
+        }
+      });
+
+      // Remove inactive henchmen
+      gameState.henchmen = gameState.henchmen.filter(h => h.active);
+    }
+
+    function updateProjectiles() {
+      const playerRect = { x: gameState.player.x, y: gameState.player.y, w: PLAYER_SIZE, h: PLAYER_SIZE };
+      
+      gameState.projectiles.forEach(projectile => {
+        if (!projectile.active) return;
+
+        // Move projectile
+        projectile.x += projectile.vx;
+        projectile.y += projectile.vy;
+
+        // Check if out of bounds
+        if (projectile.x < 0 || projectile.x > MAP_WIDTH || 
+            projectile.y < 0 || projectile.y > MAP_HEIGHT) {
+          projectile.active = false;
+          return;
+        }
+
+        // Check collision with player
+        const projectileRect = { x: projectile.x - 5, y: projectile.y - 5, w: 10, h: 10 };
+        if (checkCollision(playerRect, projectileRect)) {
+          projectile.active = false;
+          gameState.player.health -= 15;
+          document.getElementById('healthFill').style.width = gameState.player.health + '%';
+          
+          if (gameState.player.health <= 0) {
+            gameOver();
+          }
+        }
+      });
+
+      // Remove inactive projectiles
+      gameState.projectiles = gameState.projectiles.filter(p => p.active);
+    }
+
+    function draw() {
+      ctx.fillStyle = '#0a0a0a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(-gameState.camera.x, -gameState.camera.y);
+
+      // Red tint overlay when all keys collected
+      if (gameState.keysCollected >= gameState.totalKeys) {
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.15)';
+        ctx.fillRect(gameState.camera.x, gameState.camera.y, canvas.width, canvas.height);
+      }
+
+      gameState.lights.forEach(light => {
+        const gradient = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, light.radius);
+        gradient.addColorStop(0, 'rgba(255, 255, 200, 0.3)');
+        gradient.addColorStop(0.5, 'rgba(255, 255, 200, 0.1)');
+        gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(gameState.camera.x, gameState.camera.y, canvas.width, canvas.height);
+      });
+
+      ctx.fillStyle = '#333';
+      gameState.walls.forEach(wall => {
+        ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+      });
+
+      gameState.keys.forEach(key => {
+        if (!key.collected) {
+          ctx.fillStyle = '#ffff00';
+          ctx.beginPath();
+          ctx.arc(key.x, key.y, KEY_SIZE/2, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.strokeStyle = '#ffaa00';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      });
+
+      if (gameState.keysCollected === gameState.totalKeys) {
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(gameState.exit.x - EXIT_SIZE/2, gameState.exit.y - EXIT_SIZE/2, EXIT_SIZE, EXIT_SIZE);
+        ctx.fillStyle = '#0a0a0a';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('EXIT', gameState.exit.x, gameState.exit.y + 7);
+      }
+
+      ctx.fillStyle = '#00aaff';
+      ctx.fillRect(gameState.player.x, gameState.player.y, PLAYER_SIZE, PLAYER_SIZE);
+      ctx.strokeStyle = '#0088cc';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(gameState.player.x, gameState.player.y, PLAYER_SIZE, PLAYER_SIZE);
+
+      // Draw sword if attacking
+      if (swordAttack.active) {
+        const playerCenterX = gameState.player.x + PLAYER_SIZE / 2;
+        const playerCenterY = gameState.player.y + PLAYER_SIZE / 2;
+        const swordLength = 40;
+        
+        // Calculate angle towards mouse
+        const worldMouseX = mouseX + gameState.camera.x;
+        const worldMouseY = mouseY + gameState.camera.y;
+        const baseAngle = Math.atan2(worldMouseY - playerCenterY, worldMouseX - playerCenterX);
+        
+        // Swing animation
+        const elapsed = Date.now() - swordAttack.startTime;
+        const progress = elapsed / swordAttack.duration;
+        const swingOffset = (progress - 0.5) * Math.PI / 2; // Swing 90 degrees total
+        const currentAngle = baseAngle + swingOffset;
+        
+        ctx.save();
+        ctx.translate(playerCenterX, playerCenterY);
+        ctx.rotate(currentAngle);
+        
+        // Sword blade
+        ctx.strokeStyle = '#cccccc';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(swordLength, 0);
+        ctx.stroke();
+        
+        // Sword tip
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(swordLength, 0, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+        
+        // Store angle for hit detection
+        swordAttack.angle = currentAngle;
+      }
+
+      ctx.fillStyle = '#ff0000';
+      ctx.beginPath();
+      ctx.arc(gameState.ghostMonster.x + MONSTER_SIZE/2, gameState.ghostMonster.y + MONSTER_SIZE/2, MONSTER_SIZE/2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Show stunned effect
+      if (gameState.ghostMonster.stunned) {
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(gameState.ghostMonster.x + MONSTER_SIZE/2, gameState.ghostMonster.y + MONSTER_SIZE/2, MONSTER_SIZE/2 + 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(gameState.ghostMonster.x + MONSTER_SIZE/2 - 5, gameState.ghostMonster.y + MONSTER_SIZE/2 - 5, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(gameState.ghostMonster.x + MONSTER_SIZE/2 + 5, gameState.ghostMonster.y + MONSTER_SIZE/2 - 5, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#0066ff';
+      ctx.beginPath();
+      ctx.arc(gameState.wallMonster.x + MONSTER_SIZE/2, gameState.wallMonster.y + MONSTER_SIZE/2, MONSTER_SIZE/2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Show stunned effect
+      if (gameState.wallMonster.stunned) {
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(gameState.wallMonster.x + MONSTER_SIZE/2, gameState.wallMonster.y + MONSTER_SIZE/2, MONSTER_SIZE/2 + 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(gameState.wallMonster.x + MONSTER_SIZE/2 - 5, gameState.wallMonster.y + MONSTER_SIZE/2 - 5, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(gameState.wallMonster.x + MONSTER_SIZE/2 + 5, gameState.wallMonster.y + MONSTER_SIZE/2 - 5, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw trap layer (orange enemy)
+      ctx.fillStyle = '#ff8800';
+      ctx.beginPath();
+      ctx.arc(gameState.trapLayer.x + MONSTER_SIZE/2, gameState.trapLayer.y + MONSTER_SIZE/2, MONSTER_SIZE/2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Show stunned effect
+      if (gameState.trapLayer.stunned) {
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(gameState.trapLayer.x + MONSTER_SIZE/2, gameState.trapLayer.y + MONSTER_SIZE/2, MONSTER_SIZE/2 + 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(gameState.trapLayer.x + MONSTER_SIZE/2 - 5, gameState.trapLayer.y + MONSTER_SIZE/2 - 5, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(gameState.trapLayer.x + MONSTER_SIZE/2 + 5, gameState.trapLayer.y + MONSTER_SIZE/2 - 5, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw shooter (purple enemy)
+      ctx.fillStyle = '#aa00ff';
+      ctx.beginPath();
+      ctx.arc(gameState.shooter.x + MONSTER_SIZE/2, gameState.shooter.y + MONSTER_SIZE/2, MONSTER_SIZE/2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Show stunned effect
+      if (gameState.shooter.stunned) {
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(gameState.shooter.x + MONSTER_SIZE/2, gameState.shooter.y + MONSTER_SIZE/2, MONSTER_SIZE/2 + 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      
+      // Draw shooting range indicator (faint circle)
+      const dx = gameState.player.x - gameState.shooter.x;
+      const dy = gameState.player.y - gameState.shooter.y;
+      const distanceToPlayer = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distanceToPlayer <= gameState.shooter.shootRange) {
+        ctx.strokeStyle = 'rgba(170, 0, 255, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(gameState.shooter.x + MONSTER_SIZE/2, gameState.shooter.y + MONSTER_SIZE/2, gameState.shooter.shootRange, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(gameState.shooter.x + MONSTER_SIZE/2 - 5, gameState.shooter.y + MONSTER_SIZE/2 - 5, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(gameState.shooter.x + MONSTER_SIZE/2 + 5, gameState.shooter.y + MONSTER_SIZE/2 - 5, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw spawner (green enemy)
+      ctx.fillStyle = '#00ff88';
+      ctx.beginPath();
+      ctx.arc(gameState.spawner.x + MONSTER_SIZE/2, gameState.spawner.y + MONSTER_SIZE/2, MONSTER_SIZE/2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Show stunned effect
+      if (gameState.spawner.stunned) {
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(gameState.spawner.x + MONSTER_SIZE/2, gameState.spawner.y + MONSTER_SIZE/2, MONSTER_SIZE/2 + 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      
+      // Draw spawner symbol (cross)
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(gameState.spawner.x + MONSTER_SIZE/2 - 6, gameState.spawner.y + MONSTER_SIZE/2);
+      ctx.lineTo(gameState.spawner.x + MONSTER_SIZE/2 + 6, gameState.spawner.y + MONSTER_SIZE/2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(gameState.spawner.x + MONSTER_SIZE/2, gameState.spawner.y + MONSTER_SIZE/2 - 6);
+      ctx.lineTo(gameState.spawner.x + MONSTER_SIZE/2, gameState.spawner.y + MONSTER_SIZE/2 + 6);
+      ctx.stroke();
+
+      // Draw henchmen (small cyan enemies)
+      gameState.henchmen.forEach(henchman => {
+        if (henchman.active) {
+          // Calculate fade effect based on remaining lifetime
+          const now = Date.now();
+          const timeLeft = henchman.lifetime - (now - henchman.spawnTime);
+          const fadeThreshold = 2000; // Start fading 2 seconds before despawn
+          const alpha = timeLeft < fadeThreshold ? timeLeft / fadeThreshold : 1;
+          
+          ctx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+          ctx.beginPath();
+          ctx.arc(henchman.x + HENCHMAN_SIZE/2, henchman.y + HENCHMAN_SIZE/2, HENCHMAN_SIZE/2, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+          ctx.beginPath();
+          ctx.arc(henchman.x + HENCHMAN_SIZE/2 - 3, henchman.y + HENCHMAN_SIZE/2 - 3, 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(henchman.x + HENCHMAN_SIZE/2 + 3, henchman.y + HENCHMAN_SIZE/2 - 3, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // Draw projectiles
+      gameState.projectiles.forEach(projectile => {
+        if (projectile.active) {
+          ctx.fillStyle = '#ff00ff';
+          ctx.beginPath();
+          ctx.arc(projectile.x, projectile.y, 6, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Glow effect
+          ctx.strokeStyle = '#aa00ff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      });
+
+      // Draw traps
+      gameState.traps.forEach(trap => {
+        if (!trap.triggered) {
+          // Draw bear trap
+          ctx.strokeStyle = '#666666';
+          ctx.lineWidth = 3;
+          ctx.fillStyle = '#444444';
+          
+          // Trap base
+          ctx.fillRect(trap.x - 12, trap.y - 8, 24, 16);
+          
+          // Trap jaws
+          ctx.beginPath();
+          ctx.moveTo(trap.x - 12, trap.y - 8);
+          ctx.lineTo(trap.x - 18, trap.y - 15);
+          ctx.lineTo(trap.x - 6, trap.y - 15);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          
+          ctx.beginPath();
+          ctx.moveTo(trap.x + 12, trap.y + 8);
+          ctx.lineTo(trap.x + 18, trap.y + 15);
+          ctx.lineTo(trap.x + 6, trap.y + 15);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          // Draw triggered trap (closed)
+          ctx.strokeStyle = '#ff0000';
+          ctx.lineWidth = 3;
+          ctx.fillStyle = '#666666';
+          ctx.fillRect(trap.x - 10, trap.y - 10, 20, 20);
+          ctx.strokeRect(trap.x - 10, trap.y - 10, 20, 20);
+        }
+      });
+
+      ctx.restore();
+    }
+
+    function drawMinimap() {
+      const scaleX = minimapCanvas.width / MAP_WIDTH;
+      const scaleY = minimapCanvas.height / MAP_HEIGHT;
+
+      minimapCtx.fillStyle = '#000000';
+      minimapCtx.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+
+      minimapCtx.fillStyle = '#222222';
+      gameState.rooms.forEach(room => {
+        minimapCtx.fillRect(room.x * scaleX, room.y * scaleY, room.w * scaleX, room.h * scaleY);
+      });
+
+      gameState.keys.forEach(key => {
+        if (!key.collected) {
+          minimapCtx.fillStyle = '#ffff00';
+          minimapCtx.fillRect(key.x * scaleX - 2, key.y * scaleY - 2, 4, 4);
+        }
+      });
+
+      if (gameState.keysCollected === gameState.totalKeys) {
+        minimapCtx.fillStyle = '#00ff00';
+        minimapCtx.fillRect(gameState.exit.x * scaleX - 3, gameState.exit.y * scaleY - 3, 6, 6);
+      }
+
+      minimapCtx.fillStyle = '#ff0000';
+      minimapCtx.fillRect(gameState.ghostMonster.x * scaleX - 2, gameState.ghostMonster.y * scaleY - 2, 4, 4);
+
+      minimapCtx.fillStyle = '#0066ff';
+      minimapCtx.fillRect(gameState.wallMonster.x * scaleX - 2, gameState.wallMonster.y * scaleY - 2, 4, 4);
+
+      minimapCtx.fillStyle = '#ff8800';
+      minimapCtx.fillRect(gameState.trapLayer.x * scaleX - 2, gameState.trapLayer.y * scaleY - 2, 4, 4);
+
+      minimapCtx.fillStyle = '#aa00ff';
+      minimapCtx.fillRect(gameState.shooter.x * scaleX - 2, gameState.shooter.y * scaleY - 2, 4, 4);
+
+      minimapCtx.fillStyle = '#00ff88';
+      minimapCtx.fillRect(gameState.spawner.x * scaleX - 2, gameState.spawner.y * scaleY - 2, 4, 4);
+
+      // Draw henchmen on minimap
+      gameState.henchmen.forEach(henchman => {
+        if (henchman.active) {
+          minimapCtx.fillStyle = '#00ffff';
+          minimapCtx.fillRect(henchman.x * scaleX - 1, henchman.y * scaleY - 1, 2, 2);
+        }
+      });
+
+      minimapCtx.fillStyle = '#00aaff';
+      minimapCtx.fillRect(gameState.player.x * scaleX - 2, gameState.player.y * scaleY - 2, 4, 4);
+    }
+
+    function gameLoop() {
+      if (!gameState.gameRunning) return;
+
+      updatePlayer();
+      updateGhostMonster();
+      updateWallMonster();
+      updateTrapLayer();
+      updateShooter();
+      updateSpawner();
+      updateHenchmen();
+      updateProjectiles();
+      draw();
+      drawMinimap();
+
+      gameState.elapsedTime = Math.floor((Date.now() - gameState.startTime) / 1000);
+      document.getElementById('timer').textContent = gameState.elapsedTime;
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function startGame() {
+      generateLevel();
+      
+      const firstRoom = gameState.rooms[0];
+      gameState.player = { 
+        x: firstRoom.x + firstRoom.w / 2 - PLAYER_SIZE / 2, 
+        y: firstRoom.y + firstRoom.h / 2 - PLAYER_SIZE / 2, 
+        health: 100
+      };
+      
+      const lastRoom = gameState.rooms[gameState.rooms.length - 1];
+      gameState.ghostMonster = { 
+        x: lastRoom.x + lastRoom.w / 2 - MONSTER_SIZE / 2, 
+        y: lastRoom.y + lastRoom.h / 2 - MONSTER_SIZE / 2, 
+        speed: 1.8,
+        stunned: false,
+        stunEndTime: 0
+      };
+
+      const middleRoom = gameState.rooms[Math.floor(gameState.rooms.length / 2)];
+      gameState.wallMonster = {
+        x: middleRoom.x + middleRoom.w / 2 - MONSTER_SIZE / 2,
+        y: middleRoom.y + middleRoom.h / 2 - MONSTER_SIZE / 2,
+        speed: 2.5,
+        stunned: false,
+        stunEndTime: 0
+      };
+
+      const trapRoom = gameState.rooms[Math.floor(gameState.rooms.length * 0.7)];
+      gameState.trapLayer = {
+        x: trapRoom.x + trapRoom.w / 2 - MONSTER_SIZE / 2,
+        y: trapRoom.y + trapRoom.h / 2 - MONSTER_SIZE / 2,
+        speed: 1.5,
+        stunned: false,
+        stunEndTime: 0,
+        lastTrapTime: 0,
+        trapCooldown: 5000
+      };
+
+      const shooterRoom = gameState.rooms[Math.floor(gameState.rooms.length * 0.3)];
+      gameState.shooter = {
+        x: shooterRoom.x + shooterRoom.w / 2 - MONSTER_SIZE / 2,
+        y: shooterRoom.y + shooterRoom.h / 2 - MONSTER_SIZE / 2,
+        speed: 1.2,
+        stunned: false,
+        stunEndTime: 0,
+        lastShootTime: 0,
+        shootCooldown: 3000,
+        shootRange: 400
+      };
+
+      const spawnerRoom = gameState.rooms[Math.floor(gameState.rooms.length * 0.5)];
+      gameState.spawner = {
+        x: spawnerRoom.x + spawnerRoom.w / 2 - MONSTER_SIZE / 2,
+        y: spawnerRoom.y + spawnerRoom.h / 2 - MONSTER_SIZE / 2,
+        speed: 0.8,
+        stunned: false,
+        stunEndTime: 0,
+        lastSpawnTime: 0,
+        spawnCooldown: 8000
+      };
+
+      gameState.henchmen = [];
+      gameState.projectiles = [];
+      
+      gameState.exit = {
+        x: lastRoom.x + lastRoom.w - 50,
+        y: lastRoom.y + lastRoom.h - 50
+      };
+      
+      gameState.keysCollected = 0;
+      gameState.totalKeys = 6;
+      gameState.gameRunning = true;
+      gameState.startTime = Date.now();
+      gameState.elapsedTime = 0;
+      gameState.camera = { x: 0, y: 0 };
+
+      updateCamera();
+
+      document.getElementById('keyCount').textContent = '0';
+      document.getElementById('timer').textContent = '0';
+      document.getElementById('healthFill').style.width = '100%';
+      document.getElementById('startScreen').classList.add('hidden');
+      document.getElementById('gameOverScreen').classList.add('hidden');
+      document.getElementById('winScreen').classList.add('hidden');
+
+      gameLoop();
+    }
+
+    function gameOver() {
+      gameState.gameRunning = false;
+      document.getElementById('finalTime').textContent = gameState.elapsedTime;
+      document.getElementById('gameOverScreen').classList.remove('hidden');
+    }
+
+    function winGame() {
+      gameState.gameRunning = false;
+      document.getElementById('winTime').textContent = gameState.elapsedTime;
+      document.getElementById('winScreen').classList.remove('hidden');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key in keys) {
+        keys[e.key] = true;
+        e.preventDefault();
+      }
+      
+      // Sword attack with '1' key
+      if (e.key === '1' && !swordAttack.active) {
+        const now = Date.now();
+        if (now - swordAttack.lastAttackTime >= swordAttack.cooldown) {
+          swordAttack.active = true;
+          swordAttack.startTime = now;
+          swordAttack.lastAttackTime = now;
+          e.preventDefault();
+        }
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (e.key in keys) {
+        keys[e.key] = false;
+        e.preventDefault();
+      }
+    });
+
+    // Track mouse position relative to canvas
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+    });
+
+    document.getElementById('startButton').addEventListener('click', startGame);
+    document.getElementById('restartButton').addEventListener('click', startGame);
+    document.getElementById('playAgainButton').addEventListener('click', startGame);
+
+    onConfigChange(defaultConfig);
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b0c110a000bfe0e',t:'MTc2NjIwMTQ4My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
